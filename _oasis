@@ -1,0 +1,30 @@
+OASISFormat: 0.4
+Name:        docker
+Version:     0.1
+Synopsis:    Binding to the Docker Remote API
+Description: Control Docker <https://www.docker.com/> containers using the
+  remote API.
+Authors:     Christophe Troestler <Christophe.Troestler@umons.ac.be>
+Maintainers: Christophe Troestler <Christophe.Troestler@umons.ac.be>
+License:     LGPL-3.0 with OCaml linking exception
+Homepage:    https://github.com/Chris00/ocaml-docker
+Plugins:     META (0.4), StdFiles (0.4)
+BuildTools:  ocamlbuild
+
+Library "docker"
+  Path: src
+  Modules:      Docker
+  BuildDepends: bytes, uri, yojson
+
+Document API
+  Title:           API reference for the Docker module
+  Type:            OCamlbuild (0.3)
+  InstallDir:      $docdir/api
+  BuildTools:      ocamldoc, ocamlbuild
+  XOCamlbuildPath: src
+  XOCamlbuildLibraries: docker
+
+SourceRepository trunk
+  Type:       git
+  Location:   https://github.com/Chris00/ocaml-docker.git
+  Browser:    https://github.com/Chris00/ocaml-docker
