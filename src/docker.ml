@@ -426,4 +426,29 @@ module Images = struct
 
 end
 
+type version = { api_version: string;
+                 version: string;
+                 git_commit: string;
+                 go_version: string }
+
+let version ?(addr= !default_addr) () =
+  let _, _, body = response_of_get "Docker.version" addr "/version" [] in
+  match Json.from_string body with
+  | `Assoc l ->
+     let api_version = ref "" and version = ref "" in
+     let git_commit = ref "" and go_version = ref "" in
+     let update = function
+       | ("ApiVersion", `String s) -> api_version := s
+       | ("Version", `String s) -> version := s
+       | ("GitCommit", `String s) -> git_commit := s
+       | ("GoVersion", `String s) -> go_version := s
+       | _ -> () in
+     List.iter update l;
+     { api_version = !api_version;  version = !version;
+       git_commit = !git_commit;    go_version = !go_version }
+  | _ -> raise(Server_error("Docker.version: Response must be a JSON \
+                            association list: " ^ body))
+
+
+
 ;;

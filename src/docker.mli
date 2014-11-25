@@ -118,7 +118,7 @@ module Container : sig
     @raise Docker.Invalid_argument if the container does not exist.
 
     @param volumes Remove the volumes associated to the container.
-                     Default [false].
+                   Default [false].
     @param force Kill then remove the container.  Default [false]. *)
 
   (* val copy_file : ?addr: Unix.sockaddr -> id -> string -> stream *)
@@ -178,11 +178,12 @@ end
 
 (* val info : ?addr: Unix.sockaddr -> unit -> info *)
 
-(* type version = { version: string; *)
-(*                  git_commit: string; *)
-(*                  go_version: string } *)
+type version = { api_version: string;
+                 version: string;
+                 git_commit: string;
+                 go_version: string }
 
-(* val version : ?addr: Unix.sockaddr -> unit -> version *)
+val version : ?addr: Unix.sockaddr -> unit -> version
 
 (* val ping : ?addr: Unix.sockaddr -> unit -> [`Ok | `Error] *)
 
