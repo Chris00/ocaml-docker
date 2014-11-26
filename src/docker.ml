@@ -54,7 +54,7 @@ let read_headers fn_name buf fd =
           len := !len - h_len - 2;
         done;
         if !i < 0 then Buffer.add_subbytes buf b !pos !len
-        else ( (* !i = !pos *)
+        else ( (* !i = !pos, i.e., empty line *)
           Buffer.add_subbytes buf b (!pos + 2) (!len - 2);
           continue := false;
         )
@@ -75,7 +75,8 @@ let read_headers fn_name buf fd =
         messages. *)
      code, tl
 
-let read_rest buf fd =
+(* [read_all buf fd] add to [buf] the content of [fd] until EOI is reached. *)
+let read_all buf fd =
   let b = Bytes.create 4096 in
   let continue = ref true in
   while !continue do
@@ -90,7 +91,7 @@ let read_response fn_name fd =
   let status, h = read_headers fn_name buf fd in
   if status = 204 (* No Content *) || status = 205 then status, h, ""
   else
-    let body = read_rest buf fd in
+    let body = read_all buf fd in
     status, h, body
 
 let get addr url query =
@@ -168,6 +169,40 @@ let string_of_json fn_name = function
 let json_of_strings = function
   | [] -> `Null
   | l -> `List(List.map (fun s -> `String s) l)
+
+
+(* Stream processing for [attach] and [Exec]. *)
+
+module Stream = struct
+  (* Always assume the TTY is set to false.  Thus the stream is
+     multiplexed to separate stdout and stderr. *)
+
+  type t = { fd: Unix.file_descr; (* Hijacked from the transport *)
+             buf: Bytes.t; (* read buffer *)
+             pos: int; (* [pos] and [len] delimit the substring with data *)
+             len: int;
+           }
+
+  type kind = Stdin | Stdout | Stderr
+
+  (* [buf] is a buffer containing the payload already read. *)
+  let create buffer fd =
+    let len = Buffer.length buffer in
+    let buf = Bytes.create (max len 4096) in
+    Buffer.blit buffer 0  buf 0 len;
+    { fd;  buf;  pos = 0;  len }
+
+  let read st =
+    (* TODO *)
+    Some(Stdin, Buffer.create 0)
+
+  let write st b ~pos ~len = ()
+    (* TODO *)
+
+  let close st = ()
+    (* TODO *)
+end
+
 
 module Container = struct
   type id = string
@@ -265,7 +300,7 @@ module Container = struct
   let create ?(addr= !default_addr) ?(hostname="") ?(domainname="")
              ?(user="") ?(memory=0) ?(memory_swap=0)
              ?(attach_stdin=false) ?(attach_stdout=true) ?(attach_stderr=true)
-             ?(tty=false) ?(open_stdin=false) ?(stdin_once=false)
+             ?(open_stdin=false) ?(stdin_once=false)
              ?(env=[]) ?(workingdir="") ?(networking=false)
              ?(binds=[])
              ~image cmd =
@@ -281,7 +316,7 @@ module Container = struct
          ("AttachStdin", `Bool attach_stdin);
          ("AttachStdout", `Bool attach_stdout);
          ("AttachStderr", `Bool attach_stderr);
-         ("Tty", `Bool tty);
+         ("Tty", `Bool false);
          ("OpenStdin", `Bool open_stdin);
          ("StdinOnce", `Bool stdin_once);
          ("Env", json_of_strings env);
@@ -382,6 +417,72 @@ module Container = struct
     else if status >= 400 then
       raise(Invalid_argument("Docker.Container.stop: Bad parameter"))
 
+
+  let attach ?(addr= !default_addr) ?(logs=false) ?(stream=false)
+             ?(stdin=false) ?(stdout=false) ?(stderr=false) id =
+    let q = ["logs", [string_of_bool logs];
+             "stream", [string_of_bool stream];
+             "stdin", [string_of_bool stdin];
+             "stdout", [string_of_bool stdout];
+             "stderr", [string_of_bool stderr] ] in
+    let fd = post addr ("/containers/" ^ id ^ "/attach") q None in
+    let buf = Buffer.create 4096 in
+    let status, h = read_headers "Docker.Containers.attach" buf fd in
+    if status >= 400 then (
+      Unix.close fd;
+      let msg =
+        if status >= 404 then "Docker.Containers.attach: no such container"
+        else "Docker.Containers.attach: bad parameter" in
+      raise(Invalid_argument msg);
+    );
+    Stream.create buf fd
+
+  module Exec = struct
+    type t = string (* exec ID *)
+
+    let create ?(addr= !default_addr) ?(stdin=false) ?(stdout=true)
+               ?(stderr=true) ~container cmd =
+      let json =
+        `Assoc ["AttachStdin", `Bool stdin;
+                "AttachStdout", `Bool stdout;
+                "AttachStderr", `Bool stderr;
+                "Tty", `Bool false;
+                "Cmd", `List [`String cmd];
+                "Container", `String container ] in
+      let path = "/containers/" ^ container ^ "/exec" in
+      let status, _, body = response_of_post "Docker.Container.Exec.create"
+                                             addr path [] (Some json) in
+      if status >= 400 then (
+        let msg = "Docker.Container.Exec.create: no such container" in
+        raise(Invalid_argument msg);
+      );
+      (* Extract ID *)
+      match Json.from_string body with
+      | `Assoc l ->
+         (try string_of_json "Docker.Containers.create" (List.assoc "Id" l)
+          with _ -> raise(Server_error("Docker.Containers.Exec.create: \
+                                       No ID returned")))
+      | _ ->
+         raise(Server_error("Docker.Container.Exec.create: Response must be \
+                             an association list: " ^ body ))
+
+
+    let start ?(addr= !default_addr) exec_id =
+      let json = `Assoc ["Detach", `String "false";
+                         "Tty", `String "false" ] in
+      let fd = post addr ("/exec/" ^ exec_id ^ "/start") [] (Some json) in
+      let buf = Buffer.create 4096 in
+      let status, h = read_headers "Docker.Containers.attach" buf fd in
+      if status >= 400 then (
+        let msg = "Docker.Container.Exec.start: no such exec instance" in
+        raise(Invalid_argument msg);
+      );
+      Stream.create buf fd
+
+
+    (* TODO: Exec Resize *)
+    ;;
+  end
 end
 
 module Images = struct

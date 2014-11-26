@@ -17,6 +17,18 @@ exception Server_error of string
     the function raising the exception (possibly with some
     message). *)
 
+(** A stream returned by some Docker functions. *)
+module Stream : sig
+  type t
+
+  type kind = Stdin | Stdout | Stderr
+
+  val read : t -> (kind * Buffer.t) option
+
+  val write : t -> Bytes.t -> pos:int -> len:int -> unit
+
+  val close : t -> unit
+end
 
 module Container : sig
   type port = {
@@ -55,7 +67,7 @@ module Container : sig
     ?hostname: string -> ?domainname: string -> ?user: string ->
     ?memory: int -> ?memory_swap: int ->
     ?attach_stdin: bool -> ?attach_stdout: bool -> ?attach_stderr: bool ->
-    ?tty: bool -> ?open_stdin: bool -> ?stdin_once: bool ->
+    ?open_stdin: bool -> ?stdin_once: bool ->
     ?env: string list -> ?workingdir: string -> ?networking: bool ->
     ?binds: (string * string * [`RO|`RW]) list ->
     image: string -> string -> id
@@ -72,8 +84,6 @@ module Container : sig
     @param attach_stdin Attaches to stdin (default [false]).
     @param attach_stdout Attaches to stdout (default [true]).
     @param attach_stdout Attaches to stderr (default [true]).
-    @param tty Attach standard streams to a tty, including stdin if it
-               is not closed.  Default: [false].
     @param open_stdin opens stdin (sic).
     @param stdin_once close stdin after the 1 attached client disconnects.
     @param env A list of environment variables n the form of ["VAR=value"].
@@ -108,7 +118,20 @@ module Container : sig
 
   (* val kill : ?addr: Unix.sockaddr -> ?signal: int -> id -> unit *)
 
-  (* val attach : ?addr: Unix.sockaddr -> id -> stream *)
+  val attach : ?addr: Unix.sockaddr ->
+               ?logs: bool -> ?stream: bool ->
+               ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
+               id -> Stream.t
+  (** [attach id] view or interact with any running container [id]
+    primary process (pid 1).
+
+    @param logs Return logs.  Default [false].
+    @param stream Return stream.  Default [false].
+    @param stdin If [stream=true], attach to stdin.  Default [false].
+    @param stdout If [logs=true], return stdout log,
+                  if [stream=true], attach to stdout.  Default [false].
+    @param stderr If [logs=true], return stderr log,
+                  if [stream=true], attach to stderr.  Default [false]. *)
 
   (* val wait : ?addr: Unix.sockaddr -> id -> int *)
 
@@ -122,7 +145,25 @@ module Container : sig
     @param force Kill then remove the container.  Default [false]. *)
 
   (* val copy_file : ?addr: Unix.sockaddr -> id -> string -> stream *)
-  ;;
+
+  module Exec : sig
+    type t
+
+    val create : ?addr: Unix.sockaddr ->
+                 ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
+                 container: id -> string -> t
+    (** [exec id cmd] sets up an exec instance in the {i running}
+      container [id] that executes [cmd].
+
+      @param stdin whether to attach stdin.  Default: [false].
+      @param stdout whether to attach stdout.  Default: [true].
+      @param stderr whether to attach stderr.  Default: [true]. *)
+
+    val start : ?addr: Unix.sockaddr -> t -> Stream.t
+    (** [start exec_id] starts a previously set up exec instance
+      [exec_id].  Returns a stream that enable an interactive session
+      with the command. *)
+  end
 end
 
 module Images : sig
