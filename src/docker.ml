@@ -13,6 +13,7 @@ let connect addr =
   try Unix.connect fd addr;
       fd
   with Unix.Unix_error (Unix.ENOENT, _, _) ->
+    Unix.close fd;
     raise(Server_error "Cannot connect: socket does not exist")
 
 (* Return a number < 0 of not found.
@@ -62,15 +63,21 @@ let read_headers fn_name buf fd =
     else continue := false
   done;
   match List.rev !headers with
-  | [] -> raise (Server_error(fn_name ^ ": No status sent"))
+  | [] ->
+     Unix.close fd;
+     raise (Server_error(fn_name ^ ": No status sent"))
   | status :: tl ->
      let code =
        try let i1 = String.index status ' ' in
            let i2 = String.index_from status (i1 + 1) ' ' in
            int_of_string(String.sub status (i1 + 1) (i2 - i1 - 1))
        with _ ->
+         Unix.close fd;
          raise (Server_error(fn_name ^ ": Incorrect status line: " ^ status)) in
-     if code >= 500 then raise(Server_error fn_name);
+     if code >= 500 then (
+       Unix.close fd;
+       raise(Server_error fn_name);
+     );
      (* Let the client functions deal with 4xx to have more precise
         messages. *)
      code, tl
@@ -474,6 +481,7 @@ module Container = struct
       let buf = Buffer.create 4096 in
       let status, h = read_headers "Docker.Containers.attach" buf fd in
       if status >= 400 then (
+        Unix.close fd;
         let msg = "Docker.Container.Exec.start: no such exec instance" in
         raise(Invalid_argument msg);
       );
