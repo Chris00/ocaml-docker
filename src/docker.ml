@@ -184,30 +184,143 @@ module Stream = struct
   (* Always assume the TTY is set to false.  Thus the stream is
      multiplexed to separate stdout and stderr. *)
 
-  type t = { fd: Unix.file_descr; (* Hijacked from the transport *)
-             buf: Bytes.t; (* read buffer *)
-             pos: int; (* [pos] and [len] delimit the substring with data *)
-             len: int;
-           }
+  type t = {
+      fd: Unix.file_descr; (* Hijacked from the transport *)
+      out: out_channel;
+      (* Read buffer.  The bytes buf.[i] with [i0 <= i < i1] contain
+         the data. *)
+      buf: Bytes.t;
+      mutable i0: int;
+      mutable i1: int;
+      (* Partially decoded stream *)
+    }
 
   type kind = Stdin | Stdout | Stderr
+
+  exception Timeout
 
   (* [buf] is a buffer containing the payload already read. *)
   let create buffer fd =
     let len = Buffer.length buffer in
     let buf = Bytes.create (max len 4096) in
     Buffer.blit buffer 0  buf 0 len;
-    { fd;  buf;  pos = 0;  len }
+    { fd;  out = Unix.out_channel_of_descr fd;
+      buf;  i0 = 0;  i1 = 0 }
 
-  let read st =
-    (* TODO *)
-    Some(Stdin, Buffer.create 0)
+  let out st = st.out
 
-  let write st b ~pos ~len = ()
-    (* TODO *)
+  let shutdown st =
+    Unix.shutdown st.fd Unix.SHUTDOWN_SEND
 
-  let close st = ()
-    (* TODO *)
+  (* [timeout < 0] means unbounded wait. *)
+  let is_ready_for_read fd ~timeout =
+    let fds, _, _ = Unix.select [fd] [] [] timeout in
+    fds <> []
+
+  let fill st ~timeout =
+    if is_ready_for_read st.fd ~timeout then
+      (* Append data to the existing one. *)
+      let r = Unix.read st.fd st.buf st.i1 (Bytes.length st.buf - st.i1) in
+      st.i1 <- st.i1 + r
+    else
+      raise Timeout
+
+  let fill_if_needed st ~timeout =
+    if st.i0 >= st.i1 then (
+      st.i0 <- 0;
+      st.i1 <- 0;
+      fill st ~timeout;
+    )
+
+  let rec fill_8bytes_with_timeout st ~timeout =
+    if st.i0 + 8 > st.i1 then (
+      (* Only if we do not have the required bytes we care about the time. *)
+      if timeout < 0. then raise Timeout;
+      let t0 = Unix.time () in
+      fill st ~timeout; (* or raise Timeout *)
+      let t1 = Unix.time () in
+      fill_8bytes_with_timeout st ~timeout:(timeout -. (t1 -. t0))
+    )
+    else
+      (* If time is exceeded, allow only for immediate reads *)
+      if timeout >= 0. then timeout else 0.
+
+  let fill_8bytes_unbounded_wait st =
+    while st.i0 + 8 > st.i1 do
+      fill st ~timeout:(-1.); (* < 0, thus unbounded wait *)
+    done
+
+  let fill_8bytes st ~timeout =
+    if st.i0 + 8 >= Bytes.length st.buf then (
+      (* Move the data to the beginning to have at least 8 bytes after i0 *)
+      let len = st.i1 - st.i0 in
+      Bytes.blit st.buf st.i0  st.buf 0 len;
+      st.i1 <- len;
+      st.i0 <- 0;
+    );
+    if timeout < 0. then (fill_8bytes_unbounded_wait st; timeout)
+    else fill_8bytes_with_timeout st ~timeout
+
+  let read_header st ~timeout =
+    let timeout = fill_8bytes st ~timeout in
+    let typ = match Bytes.get st.buf st.i0 with
+      | '\000' -> Stdin
+      | '\001' -> Stdout
+      | '\002' -> Stderr
+      | _ -> raise(Server_error "Docker.Stream.read: invalid STREAM_TYPE") in
+    let size1 = Char.code(Bytes.get st.buf (st.i0 + 4)) in
+    let size2 = Char.code(Bytes.get st.buf (st.i0 + 5)) in
+    let size3 = Char.code(Bytes.get st.buf (st.i0 + 6)) in
+    let size4 = Char.code(Bytes.get st.buf (st.i0 + 7)) in
+    let len = size1 lsl 24 + size2 lsl 16 + size3 lsl 8 + size4 in
+    if Sys.word_size = 32 && (size1 lsr 7 = 1 || len > Sys.max_string_length) then
+      failwith "Docker.Stream.read: payload exceeds max string length \
+                (32 bits)";
+    st.i0 <- st.i0 + 8; (* 8 bytes processed *)
+    typ, len, timeout
+
+  (* Reads [len] bytes and store them in [b] starting at position [ofs]. *)
+  let rec really_read_unbounded_wait st b ofs len =
+    if len > 0 then (
+      fill_if_needed st ~timeout:(-1.);
+      let buf_len = st.i1 - st.i0 in
+      if len <= buf_len then (
+        Bytes.blit st.buf st.i0  b ofs len;
+        st.i0 <- st.i0 + len;
+      )
+      else ( (* len > buf_len *)
+        Bytes.blit st.buf st.i0  b ofs buf_len;
+        st.i0 <- st.i0 + buf_len;
+        really_read_unbounded_wait st b (ofs + buf_len) (len - buf_len)
+      )
+    )
+
+  let rec really_read_with_timeout st b ofs len ~timeout =
+    if len > 0 then (
+      let t0 = Unix.time() in
+      fill_if_needed st ~timeout;
+      let buf_len = st.i1 - st.i0 in
+      if len <= buf_len then (
+        Bytes.blit st.buf st.i0  b ofs len;
+        st.i0 <- st.i0 + len;
+      )
+      else ( (* len > buf_len *)
+        Bytes.blit st.buf st.i0  b ofs buf_len;
+        st.i0 <- st.i0 + buf_len;
+        let timeout = timeout -. (Unix.time () -. t0) in
+        really_read_with_timeout st b (ofs + buf_len) (len - buf_len) ~timeout
+      )
+    )
+
+  let read ?(timeout= -1.) st =
+    let typ, len, timeout = read_header st ~timeout in
+    let payload = Bytes.create len in
+    if timeout >= 0. then really_read_with_timeout st payload 0 len ~timeout
+    else really_read_unbounded_wait st payload 0 len;
+    typ, payload
+
+  let close st =
+    close_out st.out (* also closes the underlying file descriptor *)
 end
 
 

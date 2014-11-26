@@ -23,11 +23,27 @@ module Stream : sig
 
   type kind = Stdin | Stdout | Stderr
 
-  val read : t -> (kind * Buffer.t) option
+  exception Timeout
 
-  val write : t -> Bytes.t -> pos:int -> len:int -> unit
+  val out : t -> out_channel
+  (** [out stream] may be used to send data to the process running in
+      the container.  Closing this channel is equivalent to calling
+      {!close}. *)
+
+  val shutdown : t -> unit
+  (** [shutdown stream] transmit an end-of-file condition to the
+      server reading on the other side of the connection meaning that
+      you have finished sending data.  You can still read data from
+      the string.  You must still close the string with {!close}. *)
+
+  val read : ?timeout: float -> t -> kind * Bytes.t
+  (** [read stream] reads the next payload from the stream.
+
+    @raise Timeout if the payload could not be read within the allowed
+    timeout.  A negative timeout (the default) means unbounded wait. *)
 
   val close : t -> unit
+  (** Close the stream. *)
 end
 
 module Container : sig
