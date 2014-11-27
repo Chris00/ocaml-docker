@@ -440,7 +440,7 @@ module Container = struct
          ("OpenStdin", `Bool open_stdin);
          ("StdinOnce", `Bool stdin_once);
          ("Env", json_of_strings env);
-         ("Cmd", `List [`String cmd]);
+         ("Cmd", json_of_strings cmd);
          ("Entrypoint", `Null); (* TODO *)
          ("Image", `String image);
          ("Volumes", `Null);     (* TODO *)
@@ -567,7 +567,7 @@ module Container = struct
                 "AttachStdout", `Bool stdout;
                 "AttachStderr", `Bool stderr;
                 "Tty", `Bool false;
-                "Cmd", `List [`String cmd];
+                "Cmd", json_of_strings cmd;
                 "Container", `String container ] in
       let path = "/containers/" ^ container ^ "/exec" in
       let status, _, body = response_of_post "Docker.Container.Exec.create"

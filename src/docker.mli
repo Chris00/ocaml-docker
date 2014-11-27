@@ -86,10 +86,10 @@ module Container : sig
     ?open_stdin: bool -> ?stdin_once: bool ->
     ?env: string list -> ?workingdir: string -> ?networking: bool ->
     ?binds: (string * string * [`RO|`RW]) list ->
-    image: string -> string -> id
-  (** [create image cmd] create a container and returns its ID
-    where [image] is the image name to use for the container and
-    [cmd] the command to run.
+    image: string -> string list -> id
+  (** [create image cmd] create a container and returns its ID where
+    [image] is the image name to use for the container and [cmd] the
+    command to run.  [cmd] has the form [[prog; arg1;...; argN]].
 
     @param hostname the desired hostname to use for the container.
     @param domainname  the desired domain name to use for the container.
@@ -167,7 +167,7 @@ module Container : sig
 
     val create : ?addr: Unix.sockaddr ->
                  ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
-                 container: id -> string -> t
+                 container: id -> string list -> t
     (** [exec id cmd] sets up an exec instance in the {i running}
       container [id] that executes [cmd].
 
