@@ -11,11 +11,11 @@ exception Invalid_argument of string
     when an argument is incorrect.  [msg] is the function raising
     the exception possibly followed by an explanation. *)
 
-exception Server_error of string
-(** [Server_error msg] indicates that the server encountered an error
-    or that the returned response is incorrect.  [msg] is the name of
-    the function raising the exception (possibly with some
-    message). *)
+exception Server_error of string * string
+(** [Server_error(fn_name, msg)] indicates that the server encountered
+    an error or that the returned response is incorrect.  [fn_name] is
+    the function raising the error and [msg] is a possible explanation
+    for the error. *)
 
 (** A stream returned by some Docker functions. *)
 module Stream : sig
