@@ -450,7 +450,7 @@ module Container = struct
              ?(open_stdin=false) ?(stdin_once=false)
              ?(env=[]) ?(workingdir="") ?(networking=false)
              ?(binds=[])
-             ~image cmd =
+             image cmd =
     let json : Json.json =
       `Assoc [
          ("Hostname", `String hostname);
@@ -590,7 +590,7 @@ module Container = struct
     type t = string (* exec ID *)
 
     let create ?(addr= !default_addr) ?(stdin=false) ?(stdout=true)
-               ?(stderr=true) ~container cmd =
+               ?(stderr=true) container cmd =
       let json =
         `Assoc ["AttachStdin", `Bool stdin;
                 "AttachStdout", `Bool stdout;

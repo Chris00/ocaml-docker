@@ -88,10 +88,12 @@ module Container : sig
     ?open_stdin: bool -> ?stdin_once: bool ->
     ?env: string list -> ?workingdir: string -> ?networking: bool ->
     ?binds: (string * string * [`RO|`RW]) list ->
-    image: string -> string list -> id
+    string -> string list -> id
   (** [create image cmd] create a container and returns its ID where
     [image] is the image name to use for the container and [cmd] the
     command to run.  [cmd] has the form [[prog; arg1;...; argN]].
+    BEWARE that the output of [cmd] (on stdout and stderr) will be
+    logged by the container (see {!logs}) so it will consume disk space.
 
     @param hostname the desired hostname to use for the container.
     @param domainname  the desired domain name to use for the container.
@@ -127,6 +129,12 @@ module Container : sig
   val start : ?addr: Unix.sockaddr ->
               ?binds: (string * string * [`RO|`RW]) list ->
               id -> unit
+  (** [start id] starts the container [id].
+    @raise Server_error when, for example, if the command given by
+    {!create} does not exist in the container.
+
+    @param binds directories shared between the host and the
+    container.  Each has the form [(host_dir, container_dir, access)]. *)
 
   val stop : ?addr: Unix.sockaddr -> ?wait: int -> id -> unit
   (** [stop id] stops the container [id].
@@ -169,9 +177,13 @@ module Container : sig
 
     val create : ?addr: Unix.sockaddr ->
                  ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
-                 container: id -> string list -> t
+                 id -> string list -> t
     (** [exec id cmd] sets up an exec instance in the {i running}
-      container [id] that executes [cmd].
+      container [id] that executes [cmd].  [cmd] has the form [[prog;
+      arg1;...; argN]].  The output of this command is not logged by
+      the container.  If the command does not exist, an message will
+      be printed on the stderr component of the stream returned by
+      {!start}.
 
       @param stdin whether to attach stdin.  Default: [false].
       @param stdout whether to attach stdout.  Default: [true].
