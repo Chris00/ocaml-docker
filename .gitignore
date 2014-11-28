@@ -2,3 +2,5 @@ _build/
 setup.data
 setup.log
 setup.ml
+*.byte
+*.native

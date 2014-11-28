@@ -16,6 +16,36 @@ Library "docker"
   Modules:      Docker
   BuildDepends: bytes, uri, yojson
 
+
+# Tests
+Executable "version"
+  Path:         test
+  MainIs:       version.ml
+  Build$:       flag(tests)
+  BuildTools:   ocamlbuild
+  BuildDepends: docker
+  Install:      false
+  CompiledObject: best
+
+Executable "ls"
+  Path:         test
+  MainIs:       ls.ml
+  Build$:       flag(tests)
+  BuildTools:   ocamlbuild
+  BuildDepends: docker
+  Install:      false
+  CompiledObject: best
+
+Executable "exec"
+  Path:         test
+  MainIs:       exec.ml
+  Build$:       flag(tests)
+  BuildTools:   ocamlbuild
+  BuildDepends: docker
+  Install:      false
+  CompiledObject: best
+
+
 Document API
   Title:           API reference for the Docker module
   Type:            OCamlbuild (0.3)
