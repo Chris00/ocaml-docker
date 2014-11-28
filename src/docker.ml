@@ -102,6 +102,15 @@ let read_response fn_name fd =
     );
     status, h, body
 
+(* When the command returns a stream, we only attempt to read the
+   whole payload in case of error. *)
+let deal_with_status_500 fn_name status buf fd =
+  if status >= 500 then (
+    let body = read_all buf fd in
+    Unix.close fd;
+    raise(Server_error(fn_name, body));
+  )
+
 let get fn_name addr url query =
   let fd = connect fn_name addr in
   let buf = Buffer.create 128 in
@@ -567,6 +576,7 @@ module Container = struct
     let fd = post "Docker.Containers.attach" addr path q None in
     let buf = Buffer.create 4096 in
     let status, h = read_headers "Docker.Containers.attach" buf fd in
+    deal_with_status_500 "Docker.Containers.attach" status buf fd;
     if status >= 400 then (
       Unix.close fd;
       let msg =
@@ -610,9 +620,10 @@ module Container = struct
       let json = `Assoc ["Detach", `String "false";
                          "Tty", `String "false" ] in
       let path = "/exec/" ^ exec_id ^ "/start" in
-      let fd = post "Docker.Containers.attach" addr path [] (Some json) in
+      let fd = post "Docker.Containers.Exec.start" addr path [] (Some json) in
       let buf = Buffer.create 4096 in
-      let status, h = read_headers "Docker.Containers.attach" buf fd in
+      let status, h = read_headers "Docker.Containers.Exec.start" buf fd in
+      deal_with_status_500 "Docker.Containers.Exec.start" status buf fd;
       if status >= 400 then (
         Unix.close fd;
         let msg = "Docker.Container.Exec.start: no such exec instance" in
