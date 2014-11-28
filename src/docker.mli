@@ -21,7 +21,7 @@ exception Server_error of string * string
 module Stream : sig
   type t
 
-  type kind = Stdin | Stdout | Stderr
+  type kind = Stdout | Stderr
 
   exception Timeout
 
@@ -36,13 +36,16 @@ module Stream : sig
       you have finished sending data.  You can still read data from
       the string.  You must still close the string with {!close}. *)
 
-  val read : ?timeout: float -> t -> kind * Bytes.t
+  val read : ?timeout: float -> t -> kind * string
   (** [read stream] reads the next payload from the stream.  The byte
     sequence will be empty if there is nothing to read at the time of
     the call (in particular, if everything has been read).
 
     @raise Timeout if the payload could not be read within the allowed
     timeout.  A negative timeout (the default) means unbounded wait. *)
+
+  val read_all : t ->  (kind * string) list
+  (** Read all the available data on the stream. *)
 
   val close : t -> unit
   (** Close the stream. *)

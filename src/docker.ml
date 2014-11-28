@@ -205,7 +205,8 @@ module Stream = struct
       (* Partially decoded stream *)
     }
 
-  type kind = Stdin | Stdout | Stderr
+  type kind = Stdout | Stderr
+  type read_kind = STDIN | STDOUT | STDERR
 
   exception Timeout
 
@@ -284,13 +285,13 @@ module Stream = struct
     if st.i0 + 8 > st.i1 then
       (* The end of the stream is reached.  If we have no bytes at all
          in the pipeline, consider that the stream is empty. *)
-      if st.i0 >= st.i1 then (Stdout, 0, timeout)
+      if st.i0 >= st.i1 then (STDOUT, 0, timeout)
       else raise(Server_error("Docker.Stream", "truncated header"))
     else (
       let typ = match Bytes.get st.buf st.i0 with
-        | '\000' -> Stdin
-        | '\001' -> Stdout
-        | '\002' -> Stderr
+        | '\000' -> STDIN
+        | '\001' -> STDOUT
+        | '\002' -> STDERR
         | _ -> raise(Server_error("Docker.Stream.read",
                                  "invalid STREAM_TYPE")) in
       let size1 = Char.code(Bytes.get st.buf (st.i0 + 4)) in
@@ -339,12 +340,27 @@ module Stream = struct
       )
     )
 
-  let read ?(timeout= -1.) st =
-    let typ, len, timeout = read_header st ~timeout in
+  let rec read ?(timeout= -1.) st =
+    let typ, len, timeout1 = read_header st ~timeout in
     let payload = Bytes.create len in
-    if timeout >= 0. then really_read_with_timeout st payload 0 len ~timeout
+    if timeout1 >= 0. then
+      really_read_with_timeout st payload 0 len ~timeout:timeout1
     else really_read_unbounded_wait st payload 0 len;
-    typ, payload
+    match typ with
+    | STDOUT -> Stdout, Bytes.unsafe_to_string payload
+    | STDERR -> Stderr, Bytes.unsafe_to_string payload
+    | STDIN -> read ~timeout st (* skip without decreasing the timeout *)
+
+  let read_all st =
+    let l = ref [] in
+    let continue = ref true in
+    while !continue do
+      let (_, b) as r = read st in
+      if String.length b = 0 then continue := false
+      else l := r :: !l
+    done;
+    !l
+
 
   let close st =
     close_out st.out (* also closes the underlying file descriptor *)
