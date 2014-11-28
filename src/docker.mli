@@ -37,7 +37,9 @@ module Stream : sig
       the string.  You must still close the string with {!close}. *)
 
   val read : ?timeout: float -> t -> kind * Bytes.t
-  (** [read stream] reads the next payload from the stream.
+  (** [read stream] reads the next payload from the stream.  The byte
+    sequence will be empty if there is nothing to read at the time of
+    the call (in particular, if everything has been read).
 
     @raise Timeout if the payload could not be read within the allowed
     timeout.  A negative timeout (the default) means unbounded wait. *)

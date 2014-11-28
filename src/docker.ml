@@ -221,15 +221,18 @@ module Stream = struct
     if is_ready_for_read st.fd ~timeout then
       (* Append data to the existing one. *)
       let r = Unix.read st.fd st.buf st.i1 (Bytes.length st.buf - st.i1) in
-      st.i1 <- st.i1 + r
+      st.i1 <- st.i1 + r;
+      r
     else
       raise Timeout
 
+  (* After a call to this function st.i0 < st.i1 or we have reached
+     the end of the stream. *)
   let fill_if_needed st ~timeout =
     if st.i0 >= st.i1 then (
       st.i0 <- 0;
       st.i1 <- 0;
-      fill st ~timeout;
+      ignore(fill st ~timeout);
     )
 
   let rec fill_8bytes_with_timeout st ~timeout =
@@ -237,18 +240,22 @@ module Stream = struct
       (* Only if we do not have the required bytes we care about the time. *)
       if timeout < 0. then raise Timeout;
       let t0 = Unix.time () in
-      fill st ~timeout; (* or raise Timeout *)
-      let t1 = Unix.time () in
-      fill_8bytes_with_timeout st ~timeout:(timeout -. (t1 -. t0))
+      let r = fill st ~timeout in (* or raise Timeout *)
+      let timeout = timeout -. (Unix.time () -. t0) in
+      if r = 0 then
+        (* Nothing to read, bail out with the condition unsatisfied. *)
+        if timeout >= 0. then timeout else 0.
+      else fill_8bytes_with_timeout st ~timeout
     )
     else
       (* If time is exceeded, allow only for immediate reads *)
       if timeout >= 0. then timeout else 0.
 
-  let fill_8bytes_unbounded_wait st =
-    while st.i0 + 8 > st.i1 do
-      fill st ~timeout:(-1.); (* < 0, thus unbounded wait *)
-    done
+  let rec fill_8bytes_unbounded_wait st =
+    if st.i0 + 8 > st.i1 then (
+      let r = fill st ~timeout:(-1.) in (* < 0, thus unbounded wait *)
+      if r > 0 then fill_8bytes_unbounded_wait st
+    )
 
   let fill_8bytes st ~timeout =
     if st.i0 + 8 >= Bytes.length st.buf then (
@@ -263,21 +270,30 @@ module Stream = struct
 
   let read_header st ~timeout =
     let timeout = fill_8bytes st ~timeout in
-    let typ = match Bytes.get st.buf st.i0 with
-      | '\000' -> Stdin
-      | '\001' -> Stdout
-      | '\002' -> Stderr
-      | _ -> raise(Server_error "Docker.Stream.read: invalid STREAM_TYPE") in
-    let size1 = Char.code(Bytes.get st.buf (st.i0 + 4)) in
-    let size2 = Char.code(Bytes.get st.buf (st.i0 + 5)) in
-    let size3 = Char.code(Bytes.get st.buf (st.i0 + 6)) in
-    let size4 = Char.code(Bytes.get st.buf (st.i0 + 7)) in
-    let len = size1 lsl 24 + size2 lsl 16 + size3 lsl 8 + size4 in
-    if Sys.word_size = 32 && (size1 lsr 7 = 1 || len > Sys.max_string_length) then
-      failwith "Docker.Stream.read: payload exceeds max string length \
-                (32 bits)";
-    st.i0 <- st.i0 + 8; (* 8 bytes processed *)
-    typ, len, timeout
+    (* Check whether we succeeded to fill. *)
+    if st.i0 + 8 > st.i1 then
+      (* The end of the stream is reached.  If we have no bytes at all
+         in the pipeline, consider that the stream is empty. *)
+      if st.i0 >= st.i1 then (Stdout, 0, timeout)
+      else raise(Server_error "Docker.Stream: truncated header")
+    else (
+      let typ = match Bytes.get st.buf st.i0 with
+        | '\000' -> Stdin
+        | '\001' -> Stdout
+        | '\002' -> Stderr
+        | _ -> raise(Server_error "Docker.Stream.read: invalid STREAM_TYPE") in
+      let size1 = Char.code(Bytes.get st.buf (st.i0 + 4)) in
+      let size2 = Char.code(Bytes.get st.buf (st.i0 + 5)) in
+      let size3 = Char.code(Bytes.get st.buf (st.i0 + 6)) in
+      let size4 = Char.code(Bytes.get st.buf (st.i0 + 7)) in
+      let len = size1 lsl 24 + size2 lsl 16 + size3 lsl 8 + size4 in
+      if Sys.word_size = 32
+         && (size1 lsr 7 = 1 || len > Sys.max_string_length) then
+        failwith "Docker.Stream.read: payload exceeds max string length \
+                  (32 bits)";
+      st.i0 <- st.i0 + 8; (* 8 bytes processed *)
+      typ, len, timeout
+    )
 
   (* Reads [len] bytes and store them in [b] starting at position [ofs]. *)
   let rec really_read_unbounded_wait st b ofs len =
