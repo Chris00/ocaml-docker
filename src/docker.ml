@@ -160,6 +160,11 @@ let response_of_post fn_name addr url query json =
   Unix.close fd;
   r
 
+let unit_response_of_post fn_name addr url query json =
+  let status, _, _ = response_of_post fn_name addr url query json in
+  if status >= 400 then
+    raise(Invalid_argument(fn_name ^ ": No such container"))
+
 let delete fn_name addr url query =
   let fd = connect fn_name addr in
   let buf = Buffer.create 128 in
@@ -554,22 +559,20 @@ module Container = struct
          ("Devices", `List []);              (* TODO *)
        ] in
     let path = "/containers/" ^ id ^ "/start" in
-    let status, h, body = response_of_post "Docker.Container.start" addr
-                                           path [] (Some json) in
-    if status >= 400 then
-      raise(Invalid_argument("Docker.Container.start: No such container"))
-    (* FIXME: do we want to react on 304 – container already started ? *)
+    unit_response_of_post "Docker.Container.start" addr path [] (Some json)
 
 
   let stop ?(addr= !default_addr) ?wait id =
     let q = match wait with None -> []
                           | Some t -> ["t", [string_of_int t]] in
     let path = "/containers/" ^ id ^ "/stop" in
-    let status, _, _ = response_of_post "Docker.Container.stop" addr
-                                        path q None in
-    if status >= 400 then
-      raise(Invalid_argument("Docker.Container.stop: No such container"))
-    (* FIXME: do we want to react on 304 – container already stopped ? *)
+    unit_response_of_post "Docker.Container.stop" addr path q None
+
+  let restart ?(addr= !default_addr) ?wait id =
+    let q = match wait with None -> []
+                          | Some t -> ["t", [string_of_int t]] in
+    let path = "/containers/" ^ id ^ "/restart" in
+    unit_response_of_post "Docker.Container.restart" addr path q None
 
   let rm ?(addr= !default_addr) ?(volumes=false) ?(force=false) id =
     let q = ["v", [string_of_bool volumes];
@@ -577,9 +580,23 @@ module Container = struct
     let path = "/containers/" ^ id in
     let status = status_of_delete "Docker.Container.rm" addr path q in
     if status >= 404 then
-      raise(Invalid_argument("Docker.Container.stop: No such container"))
+      raise(Invalid_argument("Docker.Container.rm: No such container"))
     else if status >= 400 then
-      raise(Invalid_argument("Docker.Container.stop: Bad parameter"))
+      raise(Invalid_argument("Docker.Container.rm: Bad parameter"))
+
+  let kill ?(addr= !default_addr) ?signal id =
+    let q = match signal with Some s -> ["signal", [string_of_int s]]
+                            | None -> [] in
+    let path = "/containers/" ^ id ^ "/kill" in
+    unit_response_of_post "Docker.Container.kill" addr path q None
+
+  let pause ?(addr= !default_addr) id =
+    let path = "/containers/" ^ id ^ "/pause" in
+    unit_response_of_post "Docker.Container.pause" addr path [] None
+
+  let unpause ?(addr= !default_addr) id =
+    let path = "/containers/" ^ id ^ "/unpause" in
+    unit_response_of_post "Docker.Container.unpause" addr path [] None
 
 
   let attach ?(addr= !default_addr) ?(logs=false) ?(stream=false)

@@ -143,9 +143,24 @@ module Container : sig
   (** [stop id] stops the container [id].
       @param wait number of seconds to wait before killing the container. *)
 
-  (* val restart : ?addr: Unix.sockaddr -> ?time: float -> id -> unit *)
+  val restart : ?addr: Unix.sockaddr -> ?wait: int -> id -> unit
+  (** [restart id] restart the container [id].
 
-  (* val kill : ?addr: Unix.sockaddr -> ?signal: int -> id -> unit *)
+    @param wait number of seconds to wait before killing the container. *)
+
+  val kill : ?addr: Unix.sockaddr -> ?signal: int -> id -> unit
+  (** [kill id] kill the container [id].
+
+    @param signal Signal to send to the container (see the standard
+    module [Sys]).  When not set, [Sys.sigkill] is assumed and the
+    call will waits for the container to exit.  *)
+
+  val pause : ?addr: Unix.sockaddr -> id -> unit
+  (** [pause id] pause the container [id]. *)
+
+  val unpause : ?addr: Unix.sockaddr -> id -> unit
+  (** [unpause id] unpause the container [id]. *)
+
 
   val attach : ?addr: Unix.sockaddr ->
                ?logs: bool -> ?stream: bool ->
@@ -183,10 +198,12 @@ module Container : sig
                  id -> string list -> t
     (** [exec id cmd] sets up an exec instance in the {i running}
       container [id] that executes [cmd].  [cmd] has the form [[prog;
-      arg1;...; argN]].  The output of this command is not logged by
-      the container.  If the command does not exist, an message will
-      be printed on the stderr component of the stream returned by
-      {!start}.
+      arg1;...; argN]].  This command will not be restarted if the
+      container is restarted.  If the container is paused, then the
+      command will wait until the container is unpaused, and then run.
+      The output of this command is not logged by the container.  If
+      the command does not exist, an message will be printed on the
+      stderr component of the stream returned by {!start}.
 
       @param stdin whether to attach stdin.  Default: [false].
       @param stdout whether to attach stdout.  Default: [true].
