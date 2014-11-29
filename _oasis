@@ -10,10 +10,12 @@ License:     LGPL-3.0 with OCaml linking exception
 Homepage:    https://github.com/Chris00/ocaml-docker
 Plugins:     META (0.4), StdFiles (0.4)
 BuildTools:  ocamlbuild
+PreConfCommand: ocaml compatibility.ml
 
 Library "docker"
   Path: src
   Modules:      Docker
+  InternalModules: Docker_utils
   BuildDepends: bytes, uri, yojson
 
 

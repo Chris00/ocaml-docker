@@ -1,3 +1,4 @@
+open Docker_utils
 module Json = Yojson.Safe
 
 exception Invalid_argument of string

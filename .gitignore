@@ -4,3 +4,4 @@ setup.log
 setup.ml
 *.byte
 *.native
+src/docker_utils.ml
