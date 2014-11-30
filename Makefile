@@ -14,7 +14,7 @@ all byte native setup.log: configure
 	ocaml setup.ml -build
 
 configure: setup.data
-setup.data: setup.ml
+setup.data: setup.ml src/docker_utils.pre.ml
 	ocaml $< -configure --enable-tests
 
 setup.ml: _oasis
