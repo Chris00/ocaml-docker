@@ -36,11 +36,11 @@ dist tar: $(DISTFILES)
 	tar -zcvf $(PKG_TARBALL) $(PKGNAME)-$(PKGVERSION)
 	$(RM) -rf $(PKGNAME)-$(PKGVERSION)
 
-.PHONY: clean distclean dist-clean
+.PHONY: clean distclean
 clean:
 	ocaml setup.ml -clean
 	$(RM) $(PKG_TARBALL)
 
-distclean dist-clean:: clean
+distclean:: clean
 	ocaml setup.ml -distclean
 	$(RM) $(wildcard *.ba[0-9] *.bak *~ *.odocl)
