@@ -2,11 +2,11 @@ open Printf
 module C = Docker.Container
 
 let () =
-  let c = C.create "ubuntu:latest" ["uname"; "-a"] ~workingdir:"/tmp" in
+  let c = C.create "ubuntu:latest" ["bash"; "-s"] ~open_stdin:true in
   C.start c;
-  let e = C.Exec.create c ["bash"; "-s"] ~stdin:true in
+  let e = C.Exec.create c ["ls"; "/"] in
   let st = C.Exec.start e in
-  fprintf (Docker.Stream.out st) "ls -l /home/\n%!";
+  (* fprintf (Docker.Stream.out st) "ls -l /home/\n%!"; *)
   let s = Docker.Stream.read_all st in
   Docker.Container.stop c;
   Docker.Container.rm c;
