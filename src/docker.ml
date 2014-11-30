@@ -117,8 +117,10 @@ let get fn_name addr url query =
   let buf = Buffer.create 128 in
   Buffer.add_string buf "GET ";
   Buffer.add_string buf url;
-  Buffer.add_string buf "?";
-  Buffer.add_string buf (Uri.encoded_of_query query);
+  if query <> [] then (
+    Buffer.add_string buf "?";
+    Buffer.add_string buf (Uri.encoded_of_query query);
+  );
   Buffer.add_string buf " HTTP/1.1\r\n\r\n";
   ignore(Unix.write fd (Buffer.to_bytes buf) 0 (Buffer.length buf));
   fd
