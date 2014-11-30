@@ -16,7 +16,7 @@ Library "docker"
   Path: src
   Modules:      Docker
   InternalModules: Docker_utils
-  BuildDepends: bytes, uri, yojson
+  BuildDepends: bytes, unix, yojson
 
 
 # Tests

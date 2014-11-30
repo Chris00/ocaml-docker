@@ -117,10 +117,7 @@ let get fn_name addr url query =
   let buf = Buffer.create 128 in
   Buffer.add_string buf "GET ";
   Buffer.add_string buf url;
-  if query <> [] then (
-    Buffer.add_string buf "?";
-    Buffer.add_string buf (Uri.encoded_of_query query);
-  );
+  Buffer.add_encoded_query buf query;
   Buffer.add_string buf " HTTP/1.1\r\n\r\n";
   ignore(Unix.write fd (Buffer.to_bytes buf) 0 (Buffer.length buf));
   fd
@@ -137,10 +134,7 @@ let post fn_name  addr url query json =
   let buf = Buffer.create 4096 in
   Buffer.add_string buf "POST ";
   Buffer.add_string buf url;
-  (match query with
-   | [] -> ()
-   | _ -> Buffer.add_string buf "?";
-         Buffer.add_string buf (Uri.encoded_of_query query));
+  Buffer.add_encoded_query buf query;
   Buffer.add_string buf " HTTP/1.1\r\n\
                          Content-Type: application/json\r\n\
                          Content-Length: ";
@@ -172,8 +166,7 @@ let delete fn_name addr url query =
   let buf = Buffer.create 128 in
   Buffer.add_string buf "DELETE ";
   Buffer.add_string buf url;
-  Buffer.add_string buf "?";
-  Buffer.add_string buf (Uri.encoded_of_query query);
+  Buffer.add_encoded_query buf query;
   Buffer.add_string buf " HTTP/1.1\r\n\r\n";
   ignore(Unix.write fd (Buffer.to_bytes buf) 0 (Buffer.length buf));
   fd
@@ -436,17 +429,17 @@ module Container = struct
 
   let list ?(addr= !default_addr) ?(all=false) ?limit ?since ?before
            ?(size=false) () =
-    let q = if all then ["all", ["1"]] else [] in
+    let q = if all then ["all", "1"] else [] in
     let q = match limit with
-      | Some l -> ("limit", [string_of_int l]) :: q
+      | Some l -> ("limit", string_of_int l) :: q
       | None -> q in
     let q = match since with
-      | Some id -> ("since", [id]) :: q
+      | Some id -> ("since", id) :: q
       | None -> q in
     let q = match before with
-      | Some id -> ("before", [id]) :: q
+      | Some id -> ("before", id) :: q
       | None -> q in
-    let q = if size then ("size", ["1"]) :: q else q in
+    let q = if size then ("size", "1") :: q else q in
     let status, _, body = response_of_get "Docker.Container.list" addr
                                           "/containers/json" q in
     if status >= 400 then
@@ -566,19 +559,19 @@ module Container = struct
 
   let stop ?(addr= !default_addr) ?wait id =
     let q = match wait with None -> []
-                          | Some t -> ["t", [string_of_int t]] in
+                          | Some t -> ["t", string_of_int t] in
     let path = "/containers/" ^ id ^ "/stop" in
     unit_response_of_post "Docker.Container.stop" addr path q None
 
   let restart ?(addr= !default_addr) ?wait id =
     let q = match wait with None -> []
-                          | Some t -> ["t", [string_of_int t]] in
+                          | Some t -> ["t", string_of_int t] in
     let path = "/containers/" ^ id ^ "/restart" in
     unit_response_of_post "Docker.Container.restart" addr path q None
 
   let rm ?(addr= !default_addr) ?(volumes=false) ?(force=false) id =
-    let q = ["v", [string_of_bool volumes];
-             "force", [string_of_bool force]] in
+    let q = ["v", string_of_bool volumes;
+             "force", string_of_bool force] in
     let path = "/containers/" ^ id in
     let status = status_of_delete "Docker.Container.rm" addr path q in
     if status >= 404 then
@@ -587,7 +580,7 @@ module Container = struct
       raise(Invalid_argument("Docker.Container.rm: Bad parameter"))
 
   let kill ?(addr= !default_addr) ?signal id =
-    let q = match signal with Some s -> ["signal", [string_of_int s]]
+    let q = match signal with Some s -> ["signal", string_of_int s]
                             | None -> [] in
     let path = "/containers/" ^ id ^ "/kill" in
     unit_response_of_post "Docker.Container.kill" addr path q None
@@ -603,11 +596,11 @@ module Container = struct
 
   let attach ?(addr= !default_addr) ?(logs=false) ?(stream=false)
              ?(stdin=false) ?(stdout=false) ?(stderr=false) id =
-    let q = ["logs", [string_of_bool logs];
-             "stream", [string_of_bool stream];
-             "stdin", [string_of_bool stdin];
-             "stdout", [string_of_bool stdout];
-             "stderr", [string_of_bool stderr] ] in
+    let q = ["logs", string_of_bool logs;
+             "stream", string_of_bool stream;
+             "stdin", string_of_bool stdin;
+             "stdout", string_of_bool stdout;
+             "stderr", string_of_bool stderr ] in
     let path = "/containers/" ^ id ^ "/attach" in
     let fd = post "Docker.Containers.attach" addr path q None in
     let buf = Buffer.create 4096 in
@@ -703,7 +696,7 @@ module Images = struct
                              "Invalid image: " ^ Json.to_string img))
 
   let list ?(addr= !default_addr) ?(all=false) () =
-    let q = ["all", [string_of_bool all]] in
+    let q = ["all", string_of_bool all] in
     let _, _, body = response_of_get "Docker.Images.list" addr
                                      "/images/json" q in
     match Json.from_string body with
