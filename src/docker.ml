@@ -468,7 +468,7 @@ module Container = struct
 
   let create ?(addr= !default_addr) ?(hostname="") ?(domainname="")
              ?(user="") ?(memory=0) ?(memory_swap=0)
-             ?(attach_stdin=false) ?(attach_stdout=true) ?(attach_stderr=true)
+             ?(stdin=false) ?(stdout=true) ?(stderr=true)
              ?(open_stdin=false) ?(stdin_once=false)
              ?(env=[]) ?(workingdir="") ?(networking=false)
              ?(binds=[])
@@ -482,9 +482,9 @@ module Container = struct
          ("MemorySwap", `Int memory_swap);
          ("CpuShares", `Int 0); (* TODO *)
          ("Cpuset", `String "");  (* TODO *)
-         ("AttachStdin", `Bool attach_stdin);
-         ("AttachStdout", `Bool attach_stdout);
-         ("AttachStderr", `Bool attach_stderr);
+         ("AttachStdin", `Bool stdin);
+         ("AttachStdout", `Bool stdout);
+         ("AttachStderr", `Bool stderr);
          ("Tty", `Bool false);
          ("OpenStdin", `Bool open_stdin);
          ("StdinOnce", `Bool stdin_once);

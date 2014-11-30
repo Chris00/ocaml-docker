@@ -87,7 +87,7 @@ module Container : sig
     ?addr: Unix.sockaddr ->
     ?hostname: string -> ?domainname: string -> ?user: string ->
     ?memory: int -> ?memory_swap: int ->
-    ?attach_stdin: bool -> ?attach_stdout: bool -> ?attach_stderr: bool ->
+    ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
     ?open_stdin: bool -> ?stdin_once: bool ->
     ?env: string list -> ?workingdir: string -> ?networking: bool ->
     ?binds: (string * string * [`RO|`RW]) list ->
@@ -104,9 +104,9 @@ module Container : sig
     @param memory Memory limit in bytes.
     @param memory_swap Total memory usage (memory + swap);
                        set -1 to disable swap.
-    @param attach_stdin Attaches to stdin (default [false]).
-    @param attach_stdout Attaches to stdout (default [true]).
-    @param attach_stdout Attaches to stderr (default [true]).
+    @param stdin Attaches to stdin (default [false]).
+    @param stdout Attaches to stdout (default [true]).
+    @param stdout Attaches to stderr (default [true]).
     @param open_stdin opens stdin (sic).
     @param stdin_once close stdin after the 1 attached client disconnects.
     @param env A list of environment variables n the form of ["VAR=value"].
