@@ -108,7 +108,8 @@ module Container : sig
     @param stdout Attaches to stdout (default [true]).
     @param stdout Attaches to stderr (default [true]).
     @param open_stdin opens stdin (sic).
-    @param stdin_once close stdin after the 1 attached client disconnects.
+    @param stdin_once Close stdin after the 1 attached client disconnects.
+                      Default: [false].
     @param env A list of environment variables n the form of ["VAR=value"].
     @param workingdir The working dir for commands to run in.
     @param networking Whether networking is enabled for the container.
@@ -133,6 +134,9 @@ module Container : sig
               ?binds: (string * string * [`RO|`RW]) list ->
               id -> unit
   (** [start id] starts the container [id].
+    BEWARE that the optinal arguments set here override the corresponding
+    ones of {!create}.
+
     @raise Server_error when, for example, if the command given by
     {!create} does not exist in the container.
 

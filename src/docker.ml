@@ -496,13 +496,13 @@ module Container = struct
           `Assoc [
              ("Binds", json_of_binds binds);
              ("Links", `Null);              (* TODO *)
-             ("LxcConf", `List []);           (* TODO *)
+             ("LxcConf", `List []);         (* TODO *)
              ("PortBindings", `Assoc []);      (* TODO *)
              ("PublishAllPorts", `Bool false); (* TODO *)
              ("Privileged", `Bool false);      (* TODO *)
              ("Dns", `Null); (* TODO *)
              ("DnsSearch", `Null);  (* TODO *)
-             ("VolumesFrom", `List []);          (* TODO *)
+             ("VolumesFrom", `Null);          (* TODO *)
              ("CapAdd", `Null);               (* TODO *)
              ("CapDrop", `Null);              (* TODO *)
              ("RestartPolicy",
@@ -534,27 +534,28 @@ module Container = struct
   let start ?(addr= !default_addr) ?(binds=[])
             id =
     (* FIXME: may want to check that [id] does not contain special chars *)
-    let json : Json.json =
-      `Assoc [
-         ("Binds", json_of_binds binds);
-         ("Links", `Null);              (* TODO *)
-         ("LxcConf", `List []);         (* TODO *)
-         ("PortBindings", `Assoc []);   (* TODO *)
-         ("PublishAllPorts", `Bool false); (* TODO *)
-         ("Privileged", `Bool false);      (* TODO *)
-         ("Dns", `Null); (* TODO *)
-         ("DnsSearch", `Null);  (* TODO *)
-         ("VolumesFrom", `List []);          (* TODO *)
-         ("CapAdd", `Null);               (* TODO *)
-         ("CapDrop", `Null);              (* TODO *)
-         ("RestartPolicy",
-          `Assoc [("Name", `String "");
-                  ("MaximumRetryCount", `Int 0)]);  (* TODO *)
-         ("NetworkMode", `String "bridge");  (* TODO *)
-         ("Devices", `List []);              (* TODO *)
-       ] in
+    (* Don't send options that have not been set because they override
+       those of [create]. *)
+    let j = match binds with [] -> ([]: (string * Json.json) list)
+                           | _ -> [("Binds", json_of_binds binds)] in
+    (* let j = ("Links", `Null) :: j in             (\* TODO *\) *)
+    (* let j = ("LxcConf", `List []) :: j in         (\* TODO *\) *)
+    (* let j = ("PortBindings", `Assoc []) :: j in   (\* TODO *\) *)
+    (* let j = ("PublishAllPorts", `Bool false) :: j in (\* TODO *\) *)
+    (* let j = ("Privileged", `Bool false) :: j in      (\* TODO *\) *)
+    (* let j = ("Dns", `Null) :: j in (\* TODO *\) *)
+    (* let j = ("DnsSearch", `Null) :: j in  (\* TODO *\) *)
+    (* let j = ("VolumesFrom", `List []) :: j in          (\* TODO *\) *)
+    (* let j = ("CapAdd", `Null) :: j in               (\* TODO *\) *)
+    (* let j = ("CapDrop", `Null) :: j in              (\* TODO *\) *)
+    (* let j = ("RestartPolicy", *)
+    (*          `Assoc [("Name", `String ""); *)
+    (*                  ("MaximumRetryCount", `Int 0)])  :: j in  (\* TODO *\) *)
+    (* let j = ("NetworkMode", `String "bridge") :: j in  (\* TODO *\) *)
+    (* let j = ("Devices", `List []) :: j in              (\* TODO *\) *)
     let path = "/containers/" ^ id ^ "/start" in
-    unit_response_of_post "Docker.Container.start" addr path [] (Some json)
+    unit_response_of_post "Docker.Container.start" addr path []
+                          (Some(`Assoc j))
 
 
   let stop ?(addr= !default_addr) ?wait id =
