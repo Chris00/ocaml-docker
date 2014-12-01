@@ -76,7 +76,9 @@ module Container : sig
     | Vol of string (** create a new volume for the container *)
     | Mount of string * string
     (** [Mount(host_path, container_path)] bind-mount a host path
-        into the container. *)
+        into the container.  A relative [host_path] will be interpreted
+        as relative to the current working directory (at the time of
+        the function calling this binding). *)
     | Mount_ro of string * string
     (** As [Mount] but make the bind-mount read-only inside the container. *)
 

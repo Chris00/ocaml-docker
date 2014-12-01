@@ -456,13 +456,17 @@ module Container = struct
     | Mount of string * string
     | Mount_ro of string * string
 
+  let absolute_path path =
+    if Filename.is_relative path then Filename.concat (Sys.getcwd()) path
+    else path
+
   let json_of_bind = function
     (* FIXME: check the paths to not contain ":" *)
     | Vol v -> `String v
     | Mount(host_path, container_path) ->
-       `String(host_path ^ ":" ^ container_path)
+       `String(absolute_path host_path ^ ":" ^ container_path)
     | Mount_ro(host_path, container_path) ->
-       `String(host_path ^ ":" ^ container_path ^ ":ro")
+       `String(absolute_path host_path ^ ":" ^ container_path ^ ":ro")
 
   let json_of_binds = function
     | [] -> (`Null: Json.json)
