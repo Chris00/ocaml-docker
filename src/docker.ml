@@ -229,14 +229,15 @@ module Stream = struct
     let fds, _, _ = Unix.select [fd] [] [] timeout in
     fds <> []
 
+  let fill_unbounded_wait st =
+    (* Append data to the existing one. *)
+    let r = Unix.read st.fd st.buf st.i1 (Bytes.length st.buf - st.i1) in
+    st.i1 <- st.i1 + r;
+    r
+
   let fill st ~timeout =
-    if is_ready_for_read st.fd ~timeout then
-      (* Append data to the existing one. *)
-      let r = Unix.read st.fd st.buf st.i1 (Bytes.length st.buf - st.i1) in
-      st.i1 <- st.i1 + r;
-      r
-    else
-      raise Timeout
+    if is_ready_for_read st.fd ~timeout then fill_unbounded_wait st
+    else raise Timeout
 
   (* After a call to this function st.i0 < st.i1 or we have reached
      the end of the stream. *)
@@ -244,7 +245,8 @@ module Stream = struct
     if st.i0 >= st.i1 then (
       st.i0 <- 0;
       st.i1 <- 0;
-      ignore(fill st ~timeout);
+      ignore(if timeout < 0. then fill_unbounded_wait st
+             else fill st ~timeout);
     )
 
   let rec fill_8bytes_with_timeout st ~timeout =
@@ -265,7 +267,7 @@ module Stream = struct
 
   let rec fill_8bytes_unbounded_wait st =
     if st.i0 + 8 > st.i1 then (
-      let r = fill st ~timeout:(-1.) in (* < 0, thus unbounded wait *)
+      let r = fill_unbounded_wait st in
       if r > 0 then fill_8bytes_unbounded_wait st
     )
 
