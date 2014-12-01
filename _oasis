@@ -47,6 +47,15 @@ Executable "exec"
   Install:      false
   CompiledObject: best
 
+Executable "bind"
+  Path:         test
+  MainIs:       bind.ml
+  Build$:       flag(tests)
+  BuildTools:   ocamlbuild
+  BuildDepends: docker
+  Install:      false
+  CompiledObject: best
+
 
 Document API
   Title:           API reference for the Docker module
