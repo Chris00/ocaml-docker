@@ -362,7 +362,7 @@ module Stream = struct
       if String.length b = 0 then continue := false
       else l := r :: !l
     done;
-    !l
+    List.rev !l
 
 
   let close st =
