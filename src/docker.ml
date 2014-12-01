@@ -451,11 +451,18 @@ module Container = struct
                           "response not a JSON list: " ^ body))
 
 
-  let json_of_bind (host_path, container_path, access) =
+  type bind =
+    | Vol of string
+    | Mount of string * string
+    | Mount_ro of string * string
+
+  let json_of_bind = function
     (* FIXME: check the paths to not contain ":" *)
-    match access with
-    | `RO -> `String(host_path ^ ":" ^ container_path ^ ":ro")
-    | `RW -> `String(host_path ^ ":" ^ container_path)
+    | Vol v -> `String v
+    | Mount(host_path, container_path) ->
+       `String(host_path ^ ":" ^ container_path)
+    | Mount_ro(host_path, container_path) ->
+       `String(host_path ^ ":" ^ container_path ^ ":ro")
 
   let json_of_binds = function
     | [] -> (`Null: Json.json)

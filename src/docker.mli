@@ -72,6 +72,14 @@ module Container : sig
       size_root_fs: int;
     }
 
+  type bind =
+    | Vol of string (** create a new volume for the container *)
+    | Mount of string * string
+    (** [Mount(host_path, container_path)] bind-mount a host path
+        into the container. *)
+    | Mount_ro of string * string
+    (** As [Mount] but make the bind-mount read-only inside the container. *)
+
   val list : ?addr: Unix.sockaddr ->
              ?all: bool -> ?limit: int -> ?since: id -> ?before: id ->
              ?size: bool ->
@@ -90,7 +98,7 @@ module Container : sig
     ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
     ?open_stdin: bool -> ?stdin_once: bool ->
     ?env: string list -> ?workingdir: string -> ?networking: bool ->
-    ?binds: (string * string * [`RO|`RW]) list ->
+    ?binds: bind list ->
     string -> string list -> id
   (** [create image cmd] create a container and returns its ID where
     [image] is the image name to use for the container and [cmd] the
@@ -131,7 +139,7 @@ module Container : sig
   (** [export conn id] export the contents of container [id]. *)
 
   val start : ?addr: Unix.sockaddr ->
-              ?binds: (string * string * [`RO|`RW]) list ->
+              ?binds: bind list ->
               id -> unit
   (** [start id] starts the container [id].
     BEWARE that the optinal arguments set here override the corresponding
