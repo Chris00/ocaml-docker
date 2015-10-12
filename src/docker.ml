@@ -2,7 +2,8 @@ open Docker_utils
 module Json = Yojson.Safe
 
 exception Invalid_argument of string
-exception Server_error of string * string
+exception Server_error of string
+exception Error of string * string
 
 let default_addr =
   ref(Unix.ADDR_UNIX "/var/run/docker.sock")
@@ -15,7 +16,7 @@ let connect fn_name addr =
       fd
   with Unix.Unix_error (Unix.ENOENT, _, _) ->
     Unix.close fd;
-    raise(Server_error(fn_name, "Cannot connect: socket does not exist"))
+    raise(Error(fn_name, "Cannot connect: socket does not exist"))
 
 (* Return a number < 0 of not found.
    It is ASSUMED that [pos] and [len] delimit a valid substring. *)
@@ -66,7 +67,7 @@ let read_headers fn_name buf fd =
   match List.rev !headers with
   | [] ->
      Unix.close fd;
-     raise (Server_error(fn_name, "No status sent"))
+     raise (Error(fn_name, "No status sent"))
   | status :: tl ->
      let code =
        try let i1 = String.index status ' ' in
@@ -74,7 +75,7 @@ let read_headers fn_name buf fd =
            int_of_string(String.sub status (i1 + 1) (i2 - i1 - 1))
        with _ ->
          Unix.close fd;
-         raise(Server_error(fn_name, "Incorrect status line: " ^ status)) in
+         raise(Error(fn_name, "Incorrect status line: " ^ status)) in
      (* Let the client functions deal with 4xx to have more precise
         messages. *)
      code, tl
@@ -96,10 +97,11 @@ let read_response fn_name fd =
   if status = 204 (* No Content *) || status = 205 then status, h, ""
   else
     let body = read_all buf fd in
-    (* In case of error 500, the body may provide an explanation. *)
+    (* In case of error 500, the body may provide an explanation... but
+       it may also stall the whole computation so do not read it. *)
     if status >= 500 then (
       Unix.close fd;
-      raise(Server_error(fn_name, body));
+      raise(Server_error fn_name);
     );
     status, h, body
 
@@ -107,9 +109,8 @@ let read_response fn_name fd =
    whole payload in case of error. *)
 let deal_with_status_500 fn_name status buf fd =
   if status >= 500 then (
-    let body = read_all buf fd in
     Unix.close fd;
-    raise(Server_error(fn_name, body));
+    raise(Server_error fn_name);
   )
 
 let get fn_name addr url query =
@@ -182,7 +183,7 @@ let status_of_delete fn_name addr url query =
 
 let string_of_json fn_name = function
   | `String s -> s
-  | j -> raise(Server_error(fn_name, "Not a JSON string:" ^ Json.to_string j))
+  | j -> raise(Error(fn_name, "Not a JSON string:" ^ Json.to_string j))
 
 let json_of_strings = function
   | [] -> `Null
@@ -289,14 +290,13 @@ module Stream = struct
       (* The end of the stream is reached.  If we have no bytes at all
          in the pipeline, consider that the stream is empty. *)
       if st.i0 >= st.i1 then (STDOUT, 0, timeout)
-      else raise(Server_error("Docker.Stream", "truncated header"))
+      else raise(Error("Docker.Stream", "truncated header"))
     else (
       let typ = match Bytes.get st.buf st.i0 with
         | '\000' -> STDIN
         | '\001' -> STDOUT
         | '\002' -> STDERR
-        | _ -> raise(Server_error("Docker.Stream.read",
-                                 "invalid STREAM_TYPE")) in
+        | _ -> raise(Error("Docker.Stream.read", "invalid STREAM_TYPE")) in
       let size1 = Char.code(Bytes.get st.buf (st.i0 + 4)) in
       let size2 = Char.code(Bytes.get st.buf (st.i0 + 5)) in
       let size3 = Char.code(Bytes.get st.buf (st.i0 + 6)) in
@@ -308,7 +308,7 @@ module Stream = struct
                   (32 bits)";
       st.i0 <- st.i0 + 8; (* 8 bytes processed *)
       if len = 0 then
-        raise(Server_error("Docker.Stream.read", "Payload with 0 length"));
+        raise(Error("Docker.Stream.read", "Payload with 0 length"));
       typ, len, timeout
     )
 
@@ -387,12 +387,12 @@ module Container = struct
       | _ -> () in
     List.iter update l;
     if !priv < 0 || !pub < 0 || !typ = "" then
-      raise(Server_error("Docker.Container.list", "Incorrect port elements"));
+      raise(Error("Docker.Container.list", "Incorrect port elements"));
     { priv = !priv;  pub = !pub;  typ = !typ }
 
   let port_of_json = function
     | `Assoc port -> port_of_json_assoc port
-    | _ -> raise(Server_error("Docker.Container.list", "Incorrect port"));
+    | _ -> raise(Error("Docker.Container.list", "Incorrect port"));
 
   type t = {
       id: id;
@@ -428,8 +428,8 @@ module Container = struct
        { id = !id;  names = !names;  image = !image;  command = !command;
          created = !created;  status = !status;  ports = !ports;
          size_rw = !size_rw;  size_root_fs = !size_root_fs }
-    | _ -> raise(Server_error("Docker.Container.list",
-                             "Invalid container: " ^ Json.to_string c))
+    | _ -> raise(Error("Docker.Container.list",
+                       "Invalid container: " ^ Json.to_string c))
 
   let list ?(addr= !default_addr) ?(all=false) ?limit ?since ?before
            ?(size=false) () =
@@ -451,8 +451,8 @@ module Container = struct
     match Json.from_string body with
     | `List l -> List.map container_of_json l
     | _ ->
-       raise(Server_error("Docker.Container.list",
-                          "response not a JSON list: " ^ body))
+       raise(Error("Docker.Container.list",
+                   "response not a JSON list: " ^ body))
 
 
   type bind =
@@ -540,10 +540,10 @@ module Container = struct
     | `Assoc l ->
        (try string_of_json "Docker.Containers.create" (List.assoc "Id" l)
         with Not_found ->
-          raise(Server_error("Docker.Containers.create", "No ID returned")))
+          raise(Error("Docker.Containers.create", "No ID returned")))
     | _ ->
-       raise(Server_error("Docker.Container.create",
-                          "Response must be an association list: " ^ body ))
+       raise(Error("Docker.Container.create",
+                   "Response must be an association list: " ^ body ))
 
 
   let start ?(addr= !default_addr) ?(binds=[])
@@ -654,11 +654,11 @@ module Container = struct
       match Json.from_string body with
       | `Assoc l ->
          (try string_of_json "Docker.Containers.create" (List.assoc "Id" l)
-          with _ -> raise(Server_error("Docker.Containers.Exec.create",
-                                      "No ID returned")))
+          with _ -> raise(Error("Docker.Containers.Exec.create",
+                                "No ID returned")))
       | _ ->
-         raise(Server_error("Docker.Container.Exec.create",
-                            "Response must be an association list: " ^ body ))
+         raise(Error("Docker.Container.Exec.create",
+                     "Response must be an association list: " ^ body ))
 
 
     let start ?(addr= !default_addr) exec_id =
@@ -708,8 +708,8 @@ module Images = struct
        List.iter update l;
        { id = !id;  created = !created;  size = !size;
          virtual_size = !virtual_size;  tags = !tags }
-    | _ -> raise(Server_error("Docker.Images.list",
-                             "Invalid image: " ^ Json.to_string img))
+    | _ -> raise(Error("Docker.Images.list",
+                       "Invalid image: " ^ Json.to_string img))
 
   let list ?(addr= !default_addr) ?(all=false) () =
     let q = ["all", string_of_bool all] in
@@ -718,8 +718,8 @@ module Images = struct
     match Json.from_string body with
     | `List l -> List.map image_of_json l
     | _ ->
-       raise(Server_error("Docker.Images.list",
-                          "Response must be a JSON list: " ^ body))
+       raise(Error("Docker.Images.list",
+                   "Response must be a JSON list: " ^ body))
 
 
 end
@@ -744,8 +744,8 @@ let version ?(addr= !default_addr) () =
      List.iter update l;
      { api_version = !api_version;  version = !version;
        git_commit = !git_commit;    go_version = !go_version }
-  | _ -> raise(Server_error("Docker.version",
-                           "Response must be a JSON association list: " ^ body))
+  | _ -> raise(Error("Docker.version",
+                     "Response must be a JSON association list: " ^ body))
 
 
 
