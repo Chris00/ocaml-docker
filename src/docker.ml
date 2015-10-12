@@ -662,8 +662,8 @@ module Container = struct
 
 
     let start ?(addr= !default_addr) exec_id =
-      let json = `Assoc ["Detach", `String "false";
-                         "Tty", `String "false" ] in
+      let json = `Assoc ["Detach", `Bool false;
+                         "Tty", `Bool false ] in
       let path = "/exec/" ^ exec_id ^ "/start" in
       let fd = post "Docker.Containers.Exec.start" addr path [] (Some json) in
       let buf = Buffer.create 4096 in
