@@ -120,7 +120,7 @@ module Container : sig
     @param open_stdin opens stdin (sic).
     @param stdin_once Close stdin after the 1 attached client disconnects.
                       Default: [false].
-    @param env A list of environment variables n the form of ["VAR=value"].
+    @param env A list of environment variables of the form ["VAR=value"].
     @param workingdir The working dir for commands to run in.
     @param networking Whether networking is enabled for the container.
                       Default: [false].

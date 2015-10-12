@@ -307,6 +307,8 @@ module Stream = struct
         failwith "Docker.Stream.read: payload exceeds max string length \
                   (32 bits)";
       st.i0 <- st.i0 + 8; (* 8 bytes processed *)
+      if len = 0 then
+        raise(Server_error("Docker.Stream.read", "Payload with 0 length"));
       typ, len, timeout
     )
 
