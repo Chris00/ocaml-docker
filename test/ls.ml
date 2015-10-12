@@ -2,7 +2,7 @@ open Printf
 
 let show_stream () =
   let cmd = ["ls"; "-l"] in
-  let c = Docker.Container.create "ubuntu:latest" cmd in
+  let c = Docker.Container.create "debian:latest" cmd in
   Docker.Container.start c;
   let st = Docker.Container.attach c ~stdout:true ~stream:true in
   let _, s = Docker.Stream.read st ~timeout:5. in
@@ -13,7 +13,7 @@ let show_stream () =
 
 let show_logs () =
   let cmd = ["ls"; "-l"] in
-  let c = Docker.Container.create "ubuntu:latest" cmd in
+  let c = Docker.Container.create "debian:latest" cmd in
   Docker.Container.start c;
   Unix.sleep 1;
   let s = Docker.Container.attach c ~stdout:true ~logs:true in

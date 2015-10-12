@@ -2,7 +2,7 @@ open Printf
 module C = Docker.Container
 
 let () =
-  let c = C.create "ubuntu:latest" ["dash"; "-s"] ~open_stdin: true
+  let c = C.create "debian:latest" ["dash"; "-s"] ~open_stdin: true
                    ~binds:[C.Mount("_build/", "/tmp/b")] in
   C.start c;
   ignore(C.Exec.(start (create c ["touch"; "/tmp/b/bind.txt"])));
