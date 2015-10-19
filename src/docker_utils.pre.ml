@@ -1,5 +1,9 @@
 # 2 "src/docker_utils.pre.ml"
 
+module Int = struct
+  let max i j = if (i: int) > j then i else j
+end
+
 module Buffer = struct
   include Buffer
 

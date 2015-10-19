@@ -215,7 +215,7 @@ module Stream = struct
   (* [buf] is a buffer containing the payload already read. *)
   let create buffer fd =
     let len = Buffer.length buffer in
-    let buf = Bytes.create (max len 4096) in
+    let buf = Bytes.create (Int.max len 4096) in
     Buffer.blit buffer 0  buf 0 len;
     { fd;  out = Unix.out_channel_of_descr fd;
       buf;  i0 = 0;  i1 = 0 }
@@ -483,6 +483,12 @@ module Container = struct
              ?(env=[]) ?(workingdir="") ?(networking=false)
              ?(binds=[])
              image cmd =
+    (* Ensure that "You must use this with memory and make the swap
+       value larger than memory". *)
+    let memory, memory_swap =
+      if memory_swap <= 0 then (memory, -1)
+      else if memory <= 0 (* = not set *) then (memory_swap, memory_swap)
+      else (memory, Int.max memory memory_swap) in
     let json : Json.json =
       `Assoc [
          ("Hostname", `String hostname);
