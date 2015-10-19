@@ -2,7 +2,7 @@ open Printf
 
 let show_stream () =
   let cmd = ["ls"; "-l"] in
-  let c = Docker.Container.create "debian:latest" cmd in
+  let c = Docker.Container.create "debian:latest" cmd ~name:"ls_stream" in
   Docker.Container.start c;
   let st = Docker.Container.attach c ~stdout:true ~stream:true in
   let _, s = Docker.Stream.read st ~timeout:5. in

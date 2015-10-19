@@ -476,12 +476,40 @@ module Container = struct
     | [] -> (`Null: Json.json)
     | binds -> `List(List.map json_of_bind binds)
 
+  let disallowed_chars_for_name =
+    let a = Array.make 256 true in
+    let safe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\
+                0123456789_-" in
+    for i = 0 to String.length safe - 1 do
+      a.(Char.code safe.[i]) <- false
+    done;
+    a
+
+  let disallowed_char_for_name c =
+    Array.unsafe_get disallowed_chars_for_name (Char.code c)
+
+  (* Checks that the name is composed of allowed chars only. *)
+  let name_is_not_allowed name =
+    let len = String.length name in
+    if len = 0 then true
+    else if len = 1 then disallowed_char_for_name (String.unsafe_get name 0)
+    else (* len >= 2 *)
+      try
+        let c0 = String.unsafe_get name 0 in
+        if disallowed_char_for_name c0 && c0 <> '/' then raise Exit;
+        for i = 0 to String.length name - 1 do
+          if disallowed_char_for_name(String.unsafe_get name i) then raise Exit
+        done;
+        false
+      with Exit -> true
+
   let create ?(addr= !default_addr) ?(hostname="") ?(domainname="")
              ?(user="") ?(memory=0) ?(memory_swap=0)
              ?(stdin=false) ?(stdout=true) ?(stderr=true)
              ?(open_stdin=false) ?(stdin_once=false)
              ?(env=[]) ?(workingdir="") ?(networking=false)
              ?(binds=[])
+             ?name
              image cmd =
     (* Ensure that "You must use this with memory and make the swap
        value larger than memory". *)
@@ -533,9 +561,16 @@ module Container = struct
              ("Devices", `List []);              (* TODO *)
            ]);
        ] in
+    let query_params = match name with
+      | Some name ->
+         if name_is_not_allowed name then
+           invalid_arg(Printf.sprintf "Docker.Container.create: container \
+                                       name %S is not allowed" name);
+         [("name", name)]
+      | None -> [] in
     let status, _, body =
       response_of_post "Docker.Container.create" addr
-                       "/containers/create" [] (Some json) in
+                       "/containers/create" query_params (Some json) in
     if status >= 406 then
       raise(Invalid_argument("Docker.Container.create: \
                               Impossible to attach (container not running)"))

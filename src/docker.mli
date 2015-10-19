@@ -106,6 +106,7 @@ module Container : sig
     ?open_stdin: bool -> ?stdin_once: bool ->
     ?env: string list -> ?workingdir: string -> ?networking: bool ->
     ?binds: bind list ->
+    ?name: string ->
     string -> string list -> id
   (** [create image cmd] create a container and returns its ID where
     [image] is the image name to use for the container and [cmd] the
@@ -131,6 +132,10 @@ module Container : sig
                       Default: [false].
     @param binds A list of volume bindings for this container. Each volume
                  binding has the form [(host_path, container_path, access)].
+    @param name The name of the container.  If the name exists (whether
+                the container is running or not), the container
+                will not be recreated.  The name must match
+                [/?[a-zA-Z0-9_-]+] or [Invalid_argument] will be raised.
    *)
 
   (* val inspect : ?addr: Unix.sockaddr -> id -> t *)
