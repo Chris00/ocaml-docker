@@ -130,13 +130,14 @@ module Container : sig
     @param workingdir The working dir for commands to run in.
     @param networking Whether networking is enabled for the container.
                       Default: [false].
-    @param binds A list of volume bindings for this container. Each volume
-                 binding has the form [(host_path, container_path, access)].
-    @param name The name of the container.  If the name exists (whether
-                the container is running or not), the container
-                will not be recreated.  The name must match
-                [/?[a-zA-Z0-9_-]+] or [Invalid_argument] will be raised.
-   *)
+    @param binds A list of volume bindings for this container.
+    @param name The name of the container.  The name must match
+       [/?[a-zA-Z0-9_-]+] or [Invalid_argument] is raised.  It can be
+       used in place of the container ID.  If the name exists (whether
+       the container is running or not), the container will not be
+       recreated.  Note that the corresponding name in {!t} (as
+       obtained by {!list}) will have an initial '/' which means that
+       the socker daemon is the parent container. *)
 
   (* val inspect : ?addr: Unix.sockaddr -> id -> t *)
 
