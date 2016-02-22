@@ -57,6 +57,15 @@ Executable "bind"
   Install:      false
   CompiledObject: best
 
+Executable "robust"
+  Path:         test
+  MainIs:       robust.ml
+  Build$:       flag(tests)
+  BuildTools:   ocamlbuild
+  BuildDepends: docker, str
+  Install:      false
+  CompiledObject: best
+
 
 Document API
   Title:           API reference for the Docker module
