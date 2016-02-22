@@ -17,3 +17,12 @@ For the development version, you also need `oasis >= 0.4`.
 
 To compile, just type `make` and then `make install` to install it using
 `ocamlfind`.
+
+
+Testing
+-------
+
+If you compile using `make`, the tests will be built (symbolic links
+to the executables will be present at the root of this project).  In
+order to run them, make sure that the latest Debian image is installed
+— if not, simply issue `docker pull debian:latest` in a shell.
