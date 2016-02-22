@@ -94,7 +94,8 @@ let read_all buf fd =
 let read_response fn_name fd =
   let buf = Buffer.create 4096 in
   let status, h = read_headers fn_name buf fd in
-  if status = 204 (* No Content *) || status = 205 then status, h, ""
+  if status = 204 (* No Content *) || status = 205 (* Reset Content *) then
+    status, h, ""
   else
     let body = read_all buf fd in
     (* In case of error 500, the body may provide an explanation... but
