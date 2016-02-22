@@ -6,3 +6,4 @@ setup.ml
 *.native
 src/docker_utils.ml
 src/docker_config.ml
+*.tar.gz

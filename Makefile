@@ -4,8 +4,7 @@ PKGNAME = $(shell oasis query name)
 PKGVERSION = $(shell oasis query version)
 PKG_TARBALL = $(PKGNAME)-$(PKGVERSION).tar.gz
 
-DISTFILES = AUTHORS.txt INSTALL.txt README.txt _oasis _tags myocamlbuild.ml \
-  setup.ml Makefile \
+DISTFILES = README.md _oasis _tags setup.ml Makefile compatibility.ml \
   $(wildcard $(addprefix src/, *.ml *.mli *.mllib *.mlpack *.ab))
 
 .PHONY: all byte native configure doc install uninstall reinstall upload-doc
