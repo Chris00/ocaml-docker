@@ -11,11 +11,12 @@ Homepage:    https://github.com/Chris00/ocaml-docker
 Plugins:     META (0.4), StdFiles (0.4)
 BuildTools:  ocamlbuild
 PreConfCommand: ocaml compatibility.ml
+FilesAB:     src/docker_config.ml.ab
 
 Library "docker"
   Path: src
   Modules:      Docker
-  InternalModules: Docker_utils
+  InternalModules: Docker_utils, Docker_config
   BuildDepends: bytes, unix, yojson
 
 

@@ -115,11 +115,12 @@ let deal_with_status_500 fn_name status buf fd =
 
 let get fn_name addr url query =
   let fd = connect fn_name addr in
-  let buf = Buffer.create 128 in
+  let buf = Buffer.create 256 in
   Buffer.add_string buf "GET ";
   Buffer.add_string buf url;
   Buffer.add_encoded_query buf query;
-  Buffer.add_string buf " HTTP/1.1\r\n\r\n";
+  Buffer.add_string buf Docker_config.http11_header;
+  Buffer.add_string buf "\r\n";
   ignore(Unix.write fd (Buffer.to_bytes buf) 0 (Buffer.length buf));
   fd
 
@@ -136,8 +137,8 @@ let post fn_name  addr url query json =
   Buffer.add_string buf "POST ";
   Buffer.add_string buf url;
   Buffer.add_encoded_query buf query;
-  Buffer.add_string buf " HTTP/1.1\r\n\
-                         Content-Type: application/json\r\n\
+  Buffer.add_string buf Docker_config.http11_header;
+  Buffer.add_string buf "Content-Type: application/json\r\n\
                          Content-Length: ";
   (match json with
    | None ->
@@ -164,11 +165,12 @@ let unit_response_of_post fn_name addr url query json =
 
 let delete fn_name addr url query =
   let fd = connect fn_name addr in
-  let buf = Buffer.create 128 in
+  let buf = Buffer.create 256 in
   Buffer.add_string buf "DELETE ";
   Buffer.add_string buf url;
   Buffer.add_encoded_query buf query;
-  Buffer.add_string buf " HTTP/1.1\r\n\r\n";
+  Buffer.add_string buf Docker_config.http11_header;
+  Buffer.add_string buf "\r\n";
   ignore(Unix.write fd (Buffer.to_bytes buf) 0 (Buffer.length buf));
   fd
 

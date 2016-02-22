@@ -5,3 +5,4 @@ setup.ml
 *.byte
 *.native
 src/docker_utils.ml
+src/docker_config.ml
