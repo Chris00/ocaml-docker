@@ -1,5 +1,5 @@
 OASISFormat: 0.4
-Name:        docker
+Name:        docker-api
 Version:     0.1
 Synopsis:    Binding to the Docker Remote API
 Description: Control Docker <https://www.docker.com/> containers using the

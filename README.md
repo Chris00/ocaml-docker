@@ -10,7 +10,7 @@ Compilation & installation
 The easier way to install this library is to use
 [OPAM](http://opam.ocaml.org/).  Just type:
 
-    opam install docker
+    opam install docker-api
 
 This library depends on `ocamlfind >= 1.5.5`, `uri`, and `yojson`.
 For the development version, you also need `oasis >= 0.4`.

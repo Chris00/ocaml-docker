@@ -1,5 +1,5 @@
 opam-version: "1.2"
-name: "docker"
+name: "docker-api"
 version: "0.1"
 maintainer: "Christophe Troestler <Christophe.Troestler@umons.ac.be>"
 authors: [ "Christophe Troestler <Christophe.Troestler@umons.ac.be>" ]
@@ -27,6 +27,7 @@ depends: [
   "base-bytes"
   "base-unix"
   "oasis" {build & >= "0.4"}
+  "ocamlbuild" {build}
   "ocamlfind" {build & >= "1.5"}
   "yojson"
 ]
