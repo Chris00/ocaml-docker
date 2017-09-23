@@ -2,7 +2,7 @@ open Printf
 
 let show_stream () =
   let cmd = ["ls"; "-l"] in
-  let c = Docker.Container.create "debian:latest" cmd ~name:"ls_stream" in
+  let c = Docker.Container.create "debian:latest" cmd in
   Docker.Container.start c;
   let st = Docker.Container.attach c ~stdout:true ~stream:true in
   let _, s = Docker.Stream.read st ~timeout:5. in
@@ -21,7 +21,7 @@ let show_logs () =
   Docker.Container.stop c;
   Docker.Container.rm c;
   printf "%S in the container returned (logs):\n> %s\n"
-         (String.concat " " cmd) (String.concat "\n> " (List.map snd a))
+         (String.concat " " cmd) (String.concat "> " (List.map snd a))
 
 let () =
   let logs = ref false in

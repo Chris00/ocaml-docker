@@ -39,6 +39,15 @@ Executable "ls"
   Install:      false
   CompiledObject: best
 
+Executable "ps"
+  Path:         test
+  MainIs:       ps.ml
+  Build$:       flag(tests)
+  BuildTools:   ocamlbuild
+  BuildDepends: docker
+  Install:      false
+  CompiledObject: best
+
 Executable "exec"
   Path:         test
   MainIs:       exec.ml
