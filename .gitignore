@@ -1,9 +1,6 @@
 _build/
-setup.data
-setup.log
-setup.ml
-*.byte
-*.native
+.merlin
+*.install
 src/docker_utils.ml
 src/docker_config.ml
 *.tar.gz

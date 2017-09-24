@@ -1,0 +1,30 @@
+(jbuild_version 1)
+
+(executables
+ ((names     (version ls exec bind robust))
+  (libraries (docker-api))))
+
+(alias
+ ((name    runtest)
+  (deps    (version.exe))
+  (action  (run ${<}))))
+
+(alias
+ ((name    runtest)
+  (deps    (ls.exe))
+  (action  (run ${<}))))
+
+(alias
+ ((name    runtest)
+  (deps    (exec.exe))
+  (action  (run ${<}))))
+
+(alias
+ ((name    runtest)
+  (deps    (bind.exe))
+  (action  (run ${<}))))
+
+(alias
+ ((name    runtest)
+  (deps    (robust.exe))
+  (action  (run ${<}))))

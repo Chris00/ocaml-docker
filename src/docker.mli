@@ -1,9 +1,12 @@
-(** Interface to Docker Remote API <https://www.docker.com>. *)
+
+(** Interface to Docker Remote API <https://www.docker.com>.
+
+    @version %%VERSION%% *)
 
 
 val set_default_addr : Unix.sockaddr -> unit
 (** Set the address the Docker daemon listens to.  This will be used
-    by all funtions of this API unless the optioal parameter [~addr]
+    by all funtions of this API unless the optional parameter [~addr]
     is used. *)
 
 exception Invalid_argument of string

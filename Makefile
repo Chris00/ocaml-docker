@@ -1,45 +1,34 @@
-WEB =
+# This Makefile is intended for developers.  Users simply use jbuilder.
+WEB = san@math.umons.ac.be:public_html/software
 
-PKGNAME = $(shell oasis query name)
-PKGVERSION = $(shell oasis query version)
-PKG_TARBALL = $(PKGNAME)-$(PKGVERSION).tar.gz
+PKGVERSION = $(shell git describe --always --dirty)
 
-DISTFILES = README.md _oasis _tags setup.ml Makefile compatibility.ml \
-  $(wildcard $(addprefix src/, *.ml *.mli *.mllib *.mlpack *.ab))
+all build byte native:
+	jbuilder build @install #--dev
 
-.PHONY: all byte native configure doc install uninstall reinstall upload-doc
+test runtest:
+# Force the tests to be run
+	$(RM) -rf _build/default/tests/
+	jbuilder runtest
 
-all byte native setup.log: configure
-	ocaml setup.ml -build
+install uninstall:
+	jbuilder $@
 
-configure: setup.data
-setup.data: setup.ml src/docker_utils.pre.ml
-	ocaml $< -configure --enable-tests
-
-setup.ml: _oasis
-	oasis setup -setup-update dynamic
-
-doc install uninstall reinstall: setup.log
-	ocaml setup.ml -$@
+doc:
+	sed -e 's/%%VERSION%%/$(PKGVERSION)/' src/docker.mli \
+	  > _build/default/src/docker.mli
+	jbuilder build @doc
+	echo '.def { background: #f0f0f0; }' >> _build/default/_doc/odoc.css
 
 upload-doc: doc
-	scp -C -r _build/src/API.docdir/ $(WEB)/
+	scp -C -r _build/default/_doc/docker-api/Root1D $(WEB)/doc
+	scp -C _build/default/_doc/odoc.css $(WEB)/
 
-# Make a tarball
-.PHONY: dist tar
-dist tar: $(DISTFILES)
-	mkdir $(PKGNAME)-$(PKGVERSION)
-	cp --parents -r $(DISTFILES) $(PKGNAME)-$(PKGVERSION)/
-#	setup.ml independent of oasis:
-	cd $(PKGNAME)-$(PKGVERSION) && oasis setup
-	tar -zcvf $(PKG_TARBALL) $(PKGNAME)-$(PKGVERSION)
-	$(RM) -rf $(PKGNAME)-$(PKGVERSION)
+lint:
+	opam lint docker-api.opam
 
-.PHONY: clean distclean
 clean:
-	ocaml setup.ml -clean
-	$(RM) $(PKG_TARBALL)
+	jbuilder clean
+	$(RM) $(wildcard *~ *.pdf *.ps *.png *.svg)
 
-distclean:: clean
-	ocaml setup.ml -distclean
-	$(RM) $(wildcard *.ba[0-9] *.bak *~ *.odocl)
+.PHONY: all build byte native test runtest clean
