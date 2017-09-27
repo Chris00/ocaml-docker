@@ -21,7 +21,7 @@ doc:
 	echo '.def { background: #f0f0f0; }' >> _build/default/_doc/odoc.css
 
 upload-doc: doc
-	scp -C -r _build/default/_doc/docker-api/Root1D $(WEB)/doc
+	scp -C -r _build/default/_doc/docker-api/Docker $(WEB)/doc
 	scp -C _build/default/_doc/odoc.css $(WEB)/
 
 lint:

@@ -9,6 +9,7 @@ let default_addr =
   ref(Unix.ADDR_UNIX "/var/run/docker.sock")
 
 let set_default_addr addr = default_addr := addr
+(* FIXME: When Unix.ADDR_UNIX, check that the file exists?? *)
 
 let connect fn_name addr =
   let fd = Unix.socket (Unix.domain_of_sockaddr addr) Unix.SOCK_STREAM 0 in
@@ -18,7 +19,7 @@ let connect fn_name addr =
     Unix.close fd;
     raise(Error(fn_name, "Cannot connect: socket does not exist"))
 
-(* Return a number < 0 of not found.
+(* Return a number < 0 if not found.
    It is ASSUMED that [pos] and [len] delimit a valid substring. *)
 let rec index_CRLF (s: Bytes.t) ~pos ~len =
   if len <= 1 then -1 (* Cannot match "\r\n" *)
@@ -97,6 +98,7 @@ let read_response fn_name fd =
   if status = 204 (* No Content *) || status = 205 (* Reset Content *) then
     status, h, ""
   else
+    (* FIXME: Use Content-Length header if exists ? *)
     let body = read_all buf fd in
     (* In case of error 500, the body may provide an explanation... but
        it may also stall the whole computation so do not read it. *)
