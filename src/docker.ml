@@ -545,17 +545,19 @@ module Container = struct
                | `Restart_unless_stopped | `Restart_on_failure of int];
     }
 
-  let host = {
-      cpu_shares = 0;
-      memory = 0;
-      cgroup_parent = "";
-      blk_io_weight = -1;
-      cpu_period = 0;
-      memory_swap = -1;
-      binds = [];
-      network_mode = "bridge";
-      policy = `None;
+  let host ?(cpu_shares=0) ?(memory=0) ?(cgroup_parent="")
+        ?(blk_io_weight= -1) ?(cpu_period=0) ?(memory_swap= -1)
+        ?(binds=[]) ?(network_mode = "bridge") ?(policy = `None) () =
+    { cpu_shares;  memory;  cgroup_parent;
+      blk_io_weight;
+      cpu_period;
+      memory_swap;
+      binds;
+      network_mode;
+      policy;
     }
+
+  let default_host = host()
 
   let restart_policy name count =
     ("RestartPolicy", `Assoc [("Name", `String name);
@@ -566,7 +568,7 @@ module Container = struct
         ?(user="") ?(stdin=false) ?(stdout=true) ?(stderr=true)
         ?(open_stdin=false) ?(stdin_once=false)
         ?(env=[]) ?(workingdir="") ?(networking=false)
-        ?(host=host)
+        ?(host=default_host)
         ?name
         image cmd =
     (*** Host Config *)

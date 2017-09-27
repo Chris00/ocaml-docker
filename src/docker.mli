@@ -293,9 +293,20 @@ module Container : sig
          Isolation technology of the container. (Windows only) *)
     }
 
-  val host : host_config
-  (** Default host configuration.  Use [{host with ... }] to set the
-     fields you want to change. *)
+  val host :
+    ?cpu_shares: int ->
+    ?memory: int ->
+    ?cgroup_parent: string ->
+    ?blk_io_weight: int ->
+    ?cpu_period: int ->
+    ?memory_swap: int ->
+    ?binds: bind list ->
+    ?network_mode: string ->
+    ?policy: [ `Auto_remove | `None | `Restart_always
+             | `Restart_on_failure of int | `Restart_unless_stopped ] ->
+    unit -> host_config
+  (** Return the default host configuration changed according to which
+     optional labels were set. *)
 
   val create :
     ?addr: Unix.sockaddr ->
