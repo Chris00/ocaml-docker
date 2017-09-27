@@ -86,7 +86,8 @@ module Container : sig
     (** [Mount(host_path, container_path)] bind-mount a host path
         into the container.  A relative [host_path] will be interpreted
         as relative to the current working directory (at the time of
-        the function calling this binding). *)
+        the function calling this binding).  [container_path] must be an
+        {i absolute} path inside the container. *)
     | Mount_ro of string * string
     (** As [Mount] but make the bind-mount read-only inside the container. *)
 
@@ -101,14 +102,208 @@ module Container : sig
                  shown by default (i.e., this defaults to [false]).
    *)
 
+  type host_config = {
+      cpu_shares : int;
+      (** Represents this container's relative CPU weight versus other
+         containers.  Non-positive values are ignored. *)
+      memory : int;
+      (** Memory limit in bytes. *)
+      cgroup_parent : string;
+      (** Path to cgroups under which the container's cgroup is
+         created. If the path is not absolute, the path is considered
+         to be relative to the cgroups path of the init
+         process. Cgroups are created if they do not already exist. *)
+      blk_io_weight : int;
+      (** Block IO weight (relative weight).  Values outside
+         [0 .. 1000] do not set this field. *)
+      (* blk_io_weight_device : throttle_device; *)
+      (* Block IO weight (relative device weight) in the form
+         [{"Path": "device_path", "Weight": weight}]. *)
+      (* blk_io_device_read_bps : throttle_device; *)
+      (* Limit read rate (bytes per second) from a device, in the form
+         [{"Path": "device_path", "Rate": rate}]. *)
+      (* blk_io_device_write_bps : throttle_device; *)
+      (* Limit write rate (bytes per second) to a device, in the form
+         [{"Path": "device_path", "Rate": rate}]. *)
+      (* blk_io_device_read_iops : throttle_device; *)
+      (* Limit read rate (IO per second) from a device, in the form
+         [{"Path": "device_path", "Rate": rate}]. *)
+      (* blk_io_device_write_iops : throttle_device; *)
+      (* Limit write rate (IO per second) to a device, in the form
+         [{"Path": "device_path", "Rate": rate}]. *)
+      cpu_period : int;
+      (** The length of a CPU period in microseconds. Non-positive
+         values do not set this field. *)
+      (* cpu_quota : int64; *)
+      (* Microseconds of CPU time that the container can get in a CPU period. *)
+      (* cpu_realtime_period : int64; *)
+      (* The length of a CPU real-time period in microseconds. Set to
+         0 to allocate no time allocated to real-time tasks. *)
+      (* cpu_realtime_runtime : int64; *)
+      (* The length of a CPU real-time runtime in microseconds. Set to
+         0 to allocate no time allocated to real-time tasks. *)
+      (* cpuset_cpus : string; *)
+      (* CPUs in which to allow execution (e.g., 0-3, 0,1) *)
+      (* cpuset_mems : string; *)
+      (* Memory nodes (MEMs) in which to allow execution (0-3,
+         0,1). Only effective on NUMA systems. *)
+      (* devices : device_mapping; *)
+      (* A list of devices to add to the container. *)
+      (* device_cgroup_rules : string; *)
+      (* A list of cgroup rules to apply to the container *)
+      (* disk_quota : int64; *)
+      (* Disk limit (in bytes). *)
+      (* kernel_memory : int; *)
+      (* Kernel memory limit in bytes. *)
+      (* memory_reservation : int; *)
+      (* Memory soft limit in bytes. *)
+      memory_swap : int;
+      (** Total memory limit (memory + swap).  Set as -1 to enable
+          unlimited swap. *)
+      (* memory_swappiness : int; *)
+      (* Tune a container's memory swappiness behavior. Accepts an
+         integer between 0 and 100. *)
+      (* nano_cpus : int; *)
+      (* CPU quota in units of 10-9 CPUs. *)
+      (* oom_kill_disable : bool; *)
+      (* Disable OOM Killer for the container. *)
+      (* pids_limit : int; *)
+      (* Tune a container's pids limit. Set -1 for unlimited. *)
+      (* ulimits : ulimits; *)
+      (* A list of resource limits to set in the container. For
+         example: {"Name": "nofile", "Soft": 1024, "Hard": 2048} *)
+      (* cpu_count : int *)
+      (* The number of usable CPUs (Windows only).
+
+         On Windows Server containers, the processor resource controls
+         are mutually exclusive. The order of precedence is CPUCount
+         first, then CPUShares, and CPUPercent last. *)
+      (* cpu_percent : int; *)
+      (* The usable percentage of the available CPUs (Windows only).
+
+         On Windows Server containers, the processor resource controls
+         are mutually exclusive. The order of precedence is CPUCount
+         first, then CPUShares, and CPUPercent last. *)
+      (* io_maximum_iops : int; *)
+      (* Maximum IOps for the container system drive (Windows only) *)
+      (* io_maximum_bandwidth : int; *)
+      (* Maximum IO in bytes per second for the container system drive
+         (Windows only). *)
+      binds : bind list;
+      (** A list of volume bindings for this container. *)
+      (* container_id_file : string; *)
+      (* Path to a file where the container ID is written *)
+      (* log_config : log_config; *)
+      (* The logging configuration for this container *)
+      network_mode : string;
+      (** Network mode to use for this container. Supported standard
+         values are: bridge, host, none, and container:<name|id>. Any
+         other value is taken as a custom network's name to which this
+         container should connect to. *)
+      (* port_bindings : port_bindings; *)
+      (* A map of exposed container ports and the host port they
+         should map to. *)
+      policy : [ `None | `Auto_remove | `Restart_always
+               | `Restart_unless_stopped | `Restart_on_failure of int];
+      (** The behavior to apply when the container exits.  The default
+         is not to restart and not to remove the container ([`None]).
+         An ever increasing delay (double the previous delay, starting
+         at 100ms) is added before each restart to prevent flooding
+         the server.
+
+         - [`Auto_remove] Automatically remove the container when the
+           container's process exits.
+         - [`Restart_always] Always restart.
+         - [`Restart_unless_stopped] Restart always except when the
+           user has manually stopped the container.
+         - [`Restart_on_failure n] Restart only when the container
+           exit code is non-zero.  The number [n] says how many times
+           to retry before giving up. *)
+      (* volume_driver : string; *)
+      (* Driver that this container uses to mount volumes. *)
+      (* volumes_from : string; *)
+      (* A list of volumes to inherit from another container,
+         specified in the form <container name>[:<ro|rw>]. *)
+      (* mounts : mount; *)
+      (* Specification for mounts to be added to the container. *)
+      (* cap_add : string; *)
+      (* A list of kernel capabilities to add to the container. *)
+      (* cap_drop : string; *)
+      (* A list of kernel capabilities to drop from the container. *)
+      (* dns : string; *)
+      (* A list of DNS servers for the container to use. *)
+      (* dns_options : string; *)
+      (* A list of DNS options. *)
+      (* dns_search : string; *)
+      (* A list of DNS search domains. *)
+      (* extra_hosts : string; *)
+      (* A list of hostnames/IP mappings to add to the container's
+         /etc/hosts file. Specified in the form ["hostname:IP"]. *)
+      (* group_add : string; *)
+      (* A list of additional groups that the container process will run as. *)
+      (* ipc_mode : string; *)
+      (* IPC namespace to use for the container. *)
+      (* cgroup : string; *)
+      (* Cgroup to use for the container. *)
+      (* links : string; *)
+      (* A list of links for the container in the form container_name:alias. *)
+      (* oom_score_adj : int; *)
+      (* An integer value containing the score given to the container
+         in order to tune OOM killer preferences. *)
+      (* pid_mode : string; *)
+      (* Set the PID (Process) Namespace mode for the container. It
+         can be either:
+
+         "container:<name|id>": joins another container's PID namespace
+         "host": use the host's PID namespace inside the container *)
+      (* privileged : bool; *)
+      (* Gives the container full access to the host. *)
+      (* publish_all_ports : bool; *)
+      (* Allocates a random host port for all of a container's exposed ports. *)
+      (* readonly_rootfs : bool; *)
+      (* Mount the container's root filesystem as read only. *)
+      (* security_opt : string; *)
+      (* A list of string values to customize labels for MLS systems,
+         such as SELinux. *)
+      (* storage_opt : storage_opt; *)
+      (* Storage driver options for this container, in the form
+         {"size": "120G"}. *)
+      (* tmpfs : tmpfs; *)
+      (* A map of container directories which should be replaced by
+         tmpfs mounts, and their corresponding mount options. For
+         example: { "/run": "rw,noexec,nosuid,size=65536k" }. *)
+      (* uts_mode : string; *)
+      (* UTS namespace to use for the container. *)
+      (* userns_mode : string; *)
+      (* Sets the usernamespace mode for the container when
+         usernamespace remapping option is enabled. *)
+      (* shm_size : int; *)
+      (* integer >= 0
+         Size of /dev/shm in bytes. If omitted, the system uses 64MB. *)
+      (* sysctls : sysctls; *)
+      (* A list of kernel parameters (sysctls) to set in the
+         container. For example: {"net.ipv4.ip_forward": "1"} *)
+      (* runtime : string; *)
+      (* Runtime to use with this container. *)
+      (* console_size : int; *)
+      (* integer >= 0
+         Initial console size, as an [height, width] array. (Windows only) *)
+      (* isolation : string; *)
+      (* "default" "process" "hyperv"
+         Isolation technology of the container. (Windows only) *)
+    }
+
+  val host : host_config
+  (** Default host configuration.  Use [{host with ... }] to set the
+     fields you want to change. *)
+
   val create :
     ?addr: Unix.sockaddr ->
     ?hostname: string -> ?domainname: string -> ?user: string ->
-    ?memory: int -> ?memory_swap: int ->
     ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
     ?open_stdin: bool -> ?stdin_once: bool ->
     ?env: string list -> ?workingdir: string -> ?networking: bool ->
-    ?binds: bind list ->
+    ?host: host_config ->
     ?name: string ->
     string -> string list -> id
   (** [create image cmd] create a container and returns its ID where
@@ -120,9 +315,6 @@ module Container : sig
     @param hostname the desired hostname to use for the container.
     @param domainname  the desired domain name to use for the container.
     @param user the user (or UID) to use inside the container.
-    @param memory Memory limit in bytes.
-    @param memory_swap Total memory usage (memory + swap);
-                       set -1 to disable swap.
     @param stdin Attaches to stdin (default [false]).
     @param stdout Attaches to stdout (default [true]).
     @param stdout Attaches to stderr (default [true]).
@@ -130,10 +322,11 @@ module Container : sig
     @param stdin_once Close stdin after the 1 attached client disconnects.
                       Default: [false].
     @param env A list of environment variables of the form ["VAR=value"].
+               A variable without = is removed from the environment, rather
+               than to have an empty value.
     @param workingdir The working dir for commands to run in.
     @param networking Whether networking is enabled for the container.
                       Default: [false].
-    @param binds A list of volume bindings for this container.
     @param name The name of the container.  The name must match
        [/?[a-zA-Z0-9_-]+] or [Invalid_argument] is raised.  It can be
        used in place of the container ID.  If the name exists (whether

@@ -117,7 +117,7 @@ let deal_with_status_500 fn_name status buf fd =
 let get fn_name addr url query =
   let fd = connect fn_name addr in
   let buf = Buffer.create 256 in
-  Buffer.add_string buf "GET ";
+  Buffer.add_string buf "GET /v1.29";
   Buffer.add_string buf url;
   Buffer.add_encoded_query buf query;
   Buffer.add_string buf Docker_config.http11_header;
@@ -135,7 +135,7 @@ let response_of_get fn_name addr url query =
 let post fn_name  addr url query json =
   let fd = connect fn_name addr in
   let buf = Buffer.create 4096 in
-  Buffer.add_string buf "POST ";
+  Buffer.add_string buf "POST /v1.29";
   Buffer.add_string buf url;
   Buffer.add_encoded_query buf query;
   Buffer.add_string buf Docker_config.http11_header;
@@ -506,64 +506,188 @@ module Container = struct
         false
       with Exit -> true
 
+  type host_config = {
+      cpu_shares : int;
+      memory : int;
+      cgroup_parent : string;
+      blk_io_weight : int;
+      (* blk_io_weight_device : throttle_device; *)
+      (* blk_io_device_read_bps : throttle_device; *)
+      (* blk_io_device_write_bps : throttle_device; *)
+      (* blk_io_device_read_iops : throttle_device; *)
+      (* blk_io_device_write_iops : throttle_device; *)
+      cpu_period : int;
+      (* cpu_quota : int64; *)
+      (* cpu_realtime_period : int64; *)
+      (* cpu_realtime_runtime : int64; *)
+      (* cpuset_cpus : string; *)
+      (* cpuset_mems : string; *)
+      (* devices : device_mapping; *)
+      (* device_cgroup_rules : string; *)
+      (* disk_quota : int64; *)
+      (* kernel_memory : int; *)
+      (* memory_reservation : int; *)
+      memory_swap : int;
+      (* memory_swappiness : int; *)
+      (* nano_cpus : int; *)
+      (* oom_kill_disable : bool; *)
+      (* pids_limit : int; *)
+      (* ulimits : ulimits; *)
+      (* cpu_count : int *)
+      (* cpu_percent : int; *)
+      (* io_maximum_iops : int; *)
+      (* io_maximum_bandwidth : int; *)
+      binds : bind list;
+      network_mode : string;
+      policy : [ `None | `Auto_remove | `Restart_always
+               | `Restart_unless_stopped | `Restart_on_failure of int];
+    }
+
+  let host = {
+      cpu_shares = 0;
+      memory = 0;
+      cgroup_parent = "";
+      blk_io_weight = -1;
+      cpu_period = 0;
+      memory_swap = -1;
+      binds = [];
+      network_mode = "bridge";
+      policy = `None;
+    }
+
+  let restart_policy name count =
+    ("RestartPolicy", `Assoc [("Name", `String name);
+                              ("MaximumRetryCount", `Int count)])
+
+
   let create ?(addr= !default_addr) ?(hostname="") ?(domainname="")
-             ?(user="") ?(memory=0) ?(memory_swap=0)
-             ?(stdin=false) ?(stdout=true) ?(stderr=true)
-             ?(open_stdin=false) ?(stdin_once=false)
-             ?(env=[]) ?(workingdir="") ?(networking=false)
-             ?(binds=[])
-             ?name
-             image cmd =
+        ?(user="") ?(stdin=false) ?(stdout=true) ?(stderr=true)
+        ?(open_stdin=false) ?(stdin_once=false)
+        ?(env=[]) ?(workingdir="") ?(networking=false)
+        ?(host=host)
+        ?name
+        image cmd =
+    (*** Host Config *)
+    let host_config =
+      if host.cpu_shares > 0 then [("CpuShares", `Int host.cpu_shares)]
+      else [] in
     (* Ensure that "You must use this with memory and make the swap
        value larger than memory". *)
     let memory, memory_swap =
-      if memory_swap <= 0 then (memory, -1)
-      else if memory <= 0 (* = not set *) then (memory_swap, memory_swap)
-      else (memory, Int.max memory memory_swap) in
+      if host.memory_swap <= 0 then (Int.max host.memory 0, -1)
+      else if host.memory <= 0 (* = not set *) then
+        (host.memory_swap, host.memory_swap)
+      else (host.memory, Int.max host.memory host.memory_swap) in
+    let host_config = ("Memory", `Int memory)
+                      :: ("MemorySwap", `Int memory_swap)
+                      :: ("CgroupParent", `String host.cgroup_parent)
+                      :: host_config in
+    let host_config =
+      if 0 <= host.blk_io_weight && host.blk_io_weight <= 1000 then
+        ("BlkioWeight", `Int host.blk_io_weight) :: host_config
+      else host_config in
+    (* BlkioWeightDevice *)
+    (* BlkioDeviceReadBps *)
+    (* BlkioDeviceWriteBps *)
+    (* BlkioDeviceReadIOps *)
+    (* BlkioDeviceWriteIOps *)
+    let host_config = if host.cpu_period > 0 then
+                        ("CpuPeriod", `Int host.cpu_period) :: host_config
+                      else host_config in
+    (* CpuQuota *)
+    (* CpuRealtimePeriod *)
+    (* CpuRealtimeRuntime *)
+    (* CpusetCpus *)
+    (* CpusetMems *)
+    (* ("Devices", `List []) *)
+    (* DeviceCgroupRules *)
+    (* DiskQuota *)
+    (* KernelMemory *)
+    (* MemoryReservation *)
+    (* MemorySwappiness *)
+    (* NanoCPUs *)
+    (* OomKillDisable *)
+    (* PidsLimit *)
+    (* Ulimits *)
+    (* CpuCount *)
+    (* CpuPercent *)
+    (* IOMaximumIOps — Windows *)
+    (* IOMaximumBandwidth *)
+    let host_config = ("Binds", json_of_binds host.binds) :: host_config in
+    (* ContainerIDFile *)
+    (* LogConfig *)
+    let host_config = if host.network_mode <> "" then
+                        ("NetworkMode", `String "bridge") :: host_config
+                      else host_config in
+    (* PortBindings *)
+    let host_config = match host.policy with
+      | `Auto_remove -> ("AutoRemove", `Bool true) :: host_config
+      | `Restart_always -> restart_policy "always" 0 :: host_config
+      | `Restart_unless_stopped -> restart_policy "unless-stopped" 0
+                                   :: host_config
+      | `Restart_on_failure n ->
+         if n > 0 then restart_policy "on-failure" n :: host_config
+         else host_config
+      | `None -> host_config in
+    (* VolumeDriver *)
+    (* VolumesFrom *)
+    (* Mounts *)
+    (* CapAdd *)
+    (* CapDrop *)
+    (* Dns *)
+    (* DnsOptions *)
+    (* DnsSearch *)
+    (* ExtraHosts *)
+    (* GroupAdd *)
+    (* IpcMode *)
+    (* Cgroup *)
+    (* Links *)
+    (* OomScoreAdj *)
+    (* PidMode *)
+    (* Privileged *)
+    (* PublishAllPorts *)
+    (* ReadonlyRootfs *)
+    (* SecurityOpt *)
+    (* StorageOpt *)
+    (* Tmpfs *)
+    (* UTSMode *)
+    (* UsernsMode *)
+    (* ShmSize *)
+    (* Sysctls *)
+    (* Runtime *)
+    (* ConsoleSize — Windows *)
+    (* Isolation — Windows *)
+    (*** Main payload *)
     let json : Json.json =
       `Assoc [
-         ("Hostname", `String hostname);
-         ("Domainname", `String domainname);
-         ("User", `String user);
-         ("Memory", `Int memory);
-         ("MemorySwap", `Int memory_swap);
-         ("CpuShares", `Int 0); (* TODO *)
-         ("Cpuset", `String "");  (* TODO *)
-         ("AttachStdin", `Bool stdin);
-         ("AttachStdout", `Bool stdout);
-         ("AttachStderr", `Bool stderr);
-         ("Tty", `Bool false);
-         ("OpenStdin", `Bool open_stdin);
-         ("StdinOnce", `Bool stdin_once);
-         ("Env", json_of_strings env);
-         ("Cmd", json_of_strings cmd);
-         ("Entrypoint", `Null); (* TODO *)
-         ("Image", `String image);
-         ("Volumes", `Null);     (* TODO *)
-         ("WorkingDir", `String workingdir);
-         ("NetworkDisabled", `Bool(not networking));
-         ("ExposedPorts", `Null); (* TODO *)
-         ("SecurityOpts", `Null); (* TODO *)
-         ("HostConfig",
-          `Assoc [
-             ("Binds", json_of_binds binds);
-             ("Links", `Null);              (* TODO *)
-             ("LxcConf", `List []);         (* TODO *)
-             ("PortBindings", `Assoc []);      (* TODO *)
-             ("PublishAllPorts", `Bool false); (* TODO *)
-             ("Privileged", `Bool false);      (* TODO *)
-             ("Dns", `Null); (* TODO *)
-             ("DnsSearch", `Null);  (* TODO *)
-             ("VolumesFrom", `Null);          (* TODO *)
-             ("CapAdd", `Null);               (* TODO *)
-             ("CapDrop", `Null);              (* TODO *)
-             ("RestartPolicy",
-              `Assoc [("Name", `String "");
-                      ("MaximumRetryCount", `Int 0)]);  (* TODO *)
-             ("NetworkMode", `String "bridge");  (* TODO *)
-             ("Devices", `List []);              (* TODO *)
-           ]);
-       ] in
+          ("Hostname", `String hostname);
+          ("Domainname", `String domainname);
+          ("User", `String user);
+          ("AttachStdin", `Bool stdin);
+          ("AttachStdout", `Bool stdout);
+          ("AttachStderr", `Bool stderr);
+          ("ExposedPorts", `Null); (* TODO *)
+          ("Tty", `Bool false);
+          ("OpenStdin", `Bool open_stdin);
+          ("StdinOnce", `Bool stdin_once);
+          ("Env", json_of_strings env);
+          ("Cmd", json_of_strings cmd);
+          (* Healthcheck *)
+          (* ArgsEscaped: only for Windows; do not set *)
+          ("Image", `String image);
+          ("Volumes", `Null);     (* TODO *)
+          ("WorkingDir", `String workingdir);
+          ("Entrypoint", `Null); (* TODO *)
+          ("NetworkDisabled", `Bool(not networking));
+          (* MacAddress *)
+          (* OnBuild *)
+          (* Labels *)
+          (* StopSignal *)
+          (* StopTimeout *)
+          (* Shell *)
+          ("HostConfig", `Assoc host_config);
+          (* NetworkingConfig *)
+        ] in
     let query_params = match name with
       | Some name ->
          if name_is_not_allowed name then
@@ -794,3 +918,6 @@ let version ?(addr= !default_addr) () =
 
 
 ;;
+(* Local Variables: *)
+(* compile-command: "make -k -w -C.." *)
+(* End: *)
