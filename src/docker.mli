@@ -9,16 +9,20 @@ val set_default_addr : Unix.sockaddr -> unit
     by all funtions of this API unless the optional parameter [~addr]
     is used. *)
 
-exception Invalid_argument of string [@warn_on_literal_pattern]
-(** [Invalid_argument msg] can be raised by any function
-    when an incorrect argument.  [msg] is the function raising
-    the exception. *)
+exception No_such_container of string [@warn_on_literal_pattern]
+(** [No_such_container id] is raised to notify that the container [id]
+   does not exist. *)
 
 exception Failure of string * string [@warn_on_literal_pattern]
 (** [Failure(fn_name, msg)] is raised when the requested action fails
    to be performed (because, say, the container stopped,...).
    [fn_name] is the name of the function raising the error and [msg]
    an explanation. *)
+
+exception Invalid_argument of string [@warn_on_literal_pattern]
+(** [Invalid_argument msg] can be raised by any function
+    when an incorrect argument.  [msg] is the function raising
+    the exception. *)
 
 exception Server_error of string [@warn_on_literal_pattern]
 (** [Server_error fn_name] indicates that the server encountered

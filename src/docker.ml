@@ -1,8 +1,9 @@
 open Docker_utils
 module Json = Yojson.Safe
 
-exception Invalid_argument of string
+exception No_such_container of string
 exception Failure of string * string
+exception Invalid_argument of string
 exception Server_error of string
 exception Error of string * string
 
@@ -162,10 +163,9 @@ let response_of_post fn_name addr url query json =
   Unix.close fd;
   r
 
-let unit_response_of_post fn_name addr url query json =
+let unit_response_of_post fn_name addr url query json ~id =
   let status, _, _ = response_of_post fn_name addr url query json in
-  if status >= 400 then
-    raise(Failure(fn_name, "No such container"))
+  if status >= 400 then raise(No_such_container id)
 
 let delete fn_name addr url query =
   let fd = connect fn_name addr in
@@ -744,8 +744,19 @@ module Container = struct
     else if status >= 406 then
       raise(Failure("Docker.Container.create",
                     "Impossible to attach (container not running)"))
-    else if status >= 400 then
-      raise(Failure("Docker.Container.create", "No such container"));
+    else if status >= 400 then (
+      (* Try to extract the container ID. *)
+      match Json.from_string body with
+      | `Assoc l ->
+         (try
+            let m = List.assoc "message" l in
+            let m = string_of_json "Docker.Containers.create" m in
+            let i = String.index m ':' in
+            let id = String.sub m (i + 2) (String.length m - i - 2) in
+            raise(No_such_container id)
+         with _ -> raise(No_such_container "unknown ID"))
+      | _ -> raise(No_such_container "unknown ID")
+    );
     (* Extract ID *)
     match Json.from_string body with
     | `Assoc l ->
@@ -781,7 +792,7 @@ module Container = struct
     (* let j = ("Devices", `List []) :: j in              (\* TODO *\) *)
     let path = "/containers/" ^ id ^ "/start" in
     unit_response_of_post "Docker.Container.start" addr path []
-                          (Some(`Assoc j))
+                          (Some(`Assoc j)) ~id
 
 
   let stop ?(addr= !default_addr) ?wait id =
@@ -790,8 +801,7 @@ module Container = struct
     let path = "/containers/" ^ id ^ "/stop" in
   let status, _, _ =
       response_of_post "Docker.Container.stop" addr path q None in
-    if status >= 404 then
-      raise(Failure("Docker.Container.stop", "No such container"))
+    if status >= 404 then raise(No_such_container id)
     else if status >= 304 then
       raise(Failure("Docker.Container.stop", "Container already stopped"))
 
@@ -799,15 +809,14 @@ module Container = struct
     let q = match wait with None -> []
                           | Some t -> ["t", string_of_int t] in
     let path = "/containers/" ^ id ^ "/restart" in
-    unit_response_of_post "Docker.Container.restart" addr path q None
+    unit_response_of_post "Docker.Container.restart" addr path q None ~id
 
   let rm ?(addr= !default_addr) ?(volumes=false) ?(force=false) id =
     let q = ["v", string_of_bool volumes;
              "force", string_of_bool force] in
     let path = "/containers/" ^ id in
     let status = status_of_delete "Docker.Container.rm" addr path q in
-    if status >= 404 then
-      raise(Failure("Docker.Container.rm", "No such container"))
+    if status >= 404 then raise(No_such_container id)
     else if status >= 400 then
       raise(Invalid_argument("Docker.Container.rm"))
 
@@ -815,15 +824,15 @@ module Container = struct
     let q = match signal with Some s -> ["signal", string_of_int s]
                             | None -> [] in
     let path = "/containers/" ^ id ^ "/kill" in
-    unit_response_of_post "Docker.Container.kill" addr path q None
+    unit_response_of_post "Docker.Container.kill" addr path q None ~id
 
   let pause ?(addr= !default_addr) id =
     let path = "/containers/" ^ id ^ "/pause" in
-    unit_response_of_post "Docker.Container.pause" addr path [] None
+    unit_response_of_post "Docker.Container.pause" addr path [] None ~id
 
   let unpause ?(addr= !default_addr) id =
     let path = "/containers/" ^ id ^ "/unpause" in
-    unit_response_of_post "Docker.Container.unpause" addr path [] None
+    unit_response_of_post "Docker.Container.unpause" addr path [] None ~id
 
 
   let attach ?(addr= !default_addr) ?(logs=false) ?(stream=false)
@@ -840,8 +849,7 @@ module Container = struct
     deal_with_status_500 "Docker.Containers.attach" status buf fd;
     if status >= 400 then (
       Unix.close fd;
-      if status >= 404 then
-        raise(Failure("Docker.Containers.attach", "No such container"))
+      if status >= 404 then raise(No_such_container id)
       else raise(Invalid_argument "Docker.Containers.attach")
     );
     Stream.create buf fd
@@ -862,12 +870,22 @@ module Container = struct
       let status, _, body = response_of_post "Docker.Container.Exec.create"
                                              addr path [] (Some json) in
       if status >= 400 then (
-        raise(Failure("Docker.Container.Exec.create", "No such container"));
+        (* Try to extract the container ID. *)
+        match Json.from_string body with
+        | `Assoc l ->
+           (try
+              let m = List.assoc "message" l in
+              let m = string_of_json "Docker.Containers.Exec.create" m in
+              let i = String.index m ':' in
+              let id = String.sub m (i + 2) (String.length m - i - 2) in
+              raise(No_such_container id)
+            with _ -> raise(No_such_container "unknown ID"))
+        | _ -> raise(No_such_container "unknown ID")
       );
       (* Extract ID *)
       match Json.from_string body with
       | `Assoc l ->
-         (try string_of_json "Docker.Containers.create" (List.assoc "Id" l)
+         (try string_of_json "Docker.Containers.Exec.create" (List.assoc "Id" l)
           with _ -> raise(Error("Docker.Containers.Exec.create",
                                 "No ID returned")))
       | _ ->
