@@ -824,7 +824,9 @@ module Container = struct
       raise(Failure("Docker.Container.rm", message_of_body body))
     else if status >= 404 then raise(No_such_container id)
     else if status >= 400 then
-      raise(Invalid_argument("Docker.Container.rm"))
+      (* Errors like "removal of container ... is already in progress"
+         are reported with 400 — not a bad parameter problem! *)
+      raise(Failure("Docker.Container.rm", message_of_body body))
 
   let kill ?(addr= !default_addr) ?signal id =
     let q = match signal with Some s -> ["signal", string_of_int s]
