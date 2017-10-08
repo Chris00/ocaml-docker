@@ -788,7 +788,12 @@ module Container = struct
     let q = match wait with None -> []
                           | Some t -> ["t", string_of_int t] in
     let path = "/containers/" ^ id ^ "/stop" in
-    unit_response_of_post "Docker.Container.stop" addr path q None
+  let status, _, _ =
+      response_of_post "Docker.Container.stop" addr path q None in
+    if status >= 404 then
+      raise(Failure("Docker.Container.stop", "No such container"))
+    else if status >= 304 then
+      raise(Failure("Docker.Container.stop", "Container already stopped"))
 
   let restart ?(addr= !default_addr) ?wait id =
     let q = match wait with None -> []
