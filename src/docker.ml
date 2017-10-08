@@ -2,6 +2,7 @@ open Docker_utils
 module Json = Yojson.Safe
 
 exception Invalid_argument of string
+exception Failure of string * string
 exception Server_error of string
 exception Error of string * string
 
@@ -164,7 +165,7 @@ let response_of_post fn_name addr url query json =
 let unit_response_of_post fn_name addr url query json =
   let status, _, _ = response_of_post fn_name addr url query json in
   if status >= 400 then
-    raise(Invalid_argument(fn_name ^ ": No such container"))
+    raise(Failure(fn_name, "No such container"))
 
 let delete fn_name addr url query =
   let fd = connect fn_name addr in
@@ -739,12 +740,12 @@ module Container = struct
       response_of_post "Docker.Container.create" addr
                        "/containers/create" query_params (Some json) in
     if status >= 409 then
-      raise(Invalid_argument("Docker.Container.create: " ^ body))
+      raise(Failure("Docker.Container.create", body))
     else if status >= 406 then
-      raise(Invalid_argument("Docker.Container.create: \
-                              Impossible to attach (container not running)"))
+      raise(Failure("Docker.Container.create",
+                    "Impossible to attach (container not running)"))
     else if status >= 400 then
-      raise(Invalid_argument("Docker.Container.create: No such container"));
+      raise(Failure("Docker.Container.create", "No such container"));
     (* Extract ID *)
     match Json.from_string body with
     | `Assoc l ->
@@ -801,7 +802,7 @@ module Container = struct
     let path = "/containers/" ^ id in
     let status = status_of_delete "Docker.Container.rm" addr path q in
     if status >= 404 then
-      raise(Invalid_argument("Docker.Container.rm: No such container"))
+      raise(Failure("Docker.Container.rm", "No such container"))
     else if status >= 400 then
       raise(Invalid_argument("Docker.Container.rm: Bad parameter"))
 
@@ -834,10 +835,9 @@ module Container = struct
     deal_with_status_500 "Docker.Containers.attach" status buf fd;
     if status >= 400 then (
       Unix.close fd;
-      let msg =
-        if status >= 404 then "Docker.Containers.attach: no such container"
-        else "Docker.Containers.attach: bad parameter" in
-      raise(Invalid_argument msg);
+      if status >= 404 then
+        raise(Failure("Docker.Containers.attach", "No such container"))
+      else raise(Invalid_argument "Docker.Containers.attach: bad parameter")
     );
     Stream.create buf fd
 
@@ -857,8 +857,7 @@ module Container = struct
       let status, _, body = response_of_post "Docker.Container.Exec.create"
                                              addr path [] (Some json) in
       if status >= 400 then (
-        let msg = "Docker.Container.Exec.create: no such container" in
-        raise(Invalid_argument msg);
+        raise(Failure("Docker.Container.Exec.create", "No such container"));
       );
       (* Extract ID *)
       match Json.from_string body with
@@ -881,8 +880,7 @@ module Container = struct
       deal_with_status_500 "Docker.Containers.Exec.start" status buf fd;
       if status >= 400 then (
         Unix.close fd;
-        let msg = "Docker.Container.Exec.start: no such exec instance" in
-        raise(Invalid_argument msg);
+        raise(Failure("Docker.Container.Exec.start", "No such exec instance"));
       );
       Stream.create buf fd
 
