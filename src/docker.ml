@@ -379,6 +379,7 @@ end
 
 module Container = struct
   type id = string
+  type id_or_name = string
 
   type port = { priv: int;  pub: int;  typ: string }
 
@@ -407,8 +408,8 @@ module Container = struct
       created: float;
       status: string;
       ports: port list;
-      size_rw: int;
-      size_root_fs: int;
+      size_rw: int option;
+      size_root_fs: int option;
     }
 
   let container_of_json (c: Json.json) =
@@ -416,7 +417,7 @@ module Container = struct
     | `Assoc l ->
        let id = ref "" and names = ref [] and image = ref "" in
        let command = ref "" and created = ref 0. and status = ref "" in
-       let ports = ref [] and size_rw = ref 0 and size_root_fs = ref 0 in
+       let ports = ref [] and size_rw = ref (-1) and size_root_fs = ref(-1) in
        let update = function
          | ("Id", `String s) -> id := s
          | ("Names", `List l) ->
@@ -432,23 +433,58 @@ module Container = struct
        List.iter update l;
        { id = !id;  names = !names;  image = !image;  command = !command;
          created = !created;  status = !status;  ports = !ports;
-         size_rw = !size_rw;  size_root_fs = !size_root_fs }
+         size_rw = if !size_rw < 0 then None else Some !size_rw;
+         size_root_fs = if !size_root_fs < 0 then None else Some !size_root_fs }
     | _ -> raise(Error("Docker.Container.list",
                        "Invalid container: " ^ Json.to_string c))
 
-  let list ?(addr= !default_addr) ?(all=false) ?limit ?since ?before
-           ?(size=false) () =
+  let json_of_health = function
+    | `Starting -> `String "starting"
+    | `Healthy -> `String "healthy"
+    | `Unhealthy -> `String "unhealthy"
+    | `None -> `String "none"
+
+  let json_of_status = function
+      | `Created -> `String "created"
+      | `Restarting -> `String "restarting"
+      | `Running -> `String "running"
+      | `Removing -> `String "removing"
+      | `Paused -> `String "paused"
+      | `Exited -> `String "exited"
+      | `Dead -> `String "dead"
+
+  let list ?(addr= !default_addr) ?(all=false) ?limit ?(size=false)
+        ?before ?exited ?health ?name ?since ?status ?volume () =
     let q = if all then ["all", "1"] else [] in
     let q = match limit with
       | Some l -> ("limit", string_of_int l) :: q
       | None -> q in
-    let q = match since with
-      | Some id -> ("since", id) :: q
-      | None -> q in
-    let q = match before with
-      | Some id -> ("before", id) :: q
-      | None -> q in
     let q = if size then ("size", "1") :: q else q in
+    let filters = [] in
+    let filters = match before with
+      | Some id -> ("before", `List[`String id]) :: filters
+      | None -> filters in
+    let filters = match exited with
+      | Some i -> ("exited", `List(List.map (fun i -> `Int i) i)) :: filters
+      | None -> filters in
+    let filters = match health with
+      | Some h -> ("health", `List(List.map json_of_health h)) :: filters
+      | None -> filters in
+    let filters = match name with
+      | Some n -> ("name", `List(List.map (fun n -> `String n) n)) :: filters
+      | None -> filters in
+    let filters = match since with
+      | Some id -> ("since", `List[`String id]) :: filters
+      | None -> filters in
+    let filters = match status with
+      | Some s -> ("status", `List(List.map json_of_status s)) :: filters
+      | None -> filters in
+    let filters = match volume with
+      | Some id -> ("volume", `List[`String id]) :: filters
+      | None -> filters in
+    let q = match filters with
+      | _ :: _ -> ("filters", Json.to_string (`Assoc filters)) :: q
+      | [] -> q in
     let status, _, body = response_of_get "Docker.Container.list" addr
                                           "/containers/json" q in
     if status >= 400 then

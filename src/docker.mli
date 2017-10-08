@@ -68,6 +68,8 @@ module Container : sig
 
   type id = string
 
+  type id_or_name = string
+
   type t = {
       id: id;    (** Identifier of the container. *)
       names: string list; (** Names given to the container. *)
@@ -76,8 +78,8 @@ module Container : sig
       created: float;  (** Unix time of creation. *)
       status: string;  (** Human readable status. *)
       ports: port list;
-      size_rw: int;
-      size_root_fs: int;
+      size_rw: int option;
+      size_root_fs: int option;
     }
 
   type bind =
@@ -92,14 +94,29 @@ module Container : sig
     (** As [Mount] but make the bind-mount read-only inside the container. *)
 
   val list : ?addr: Unix.sockaddr ->
-             ?all: bool -> ?limit: int -> ?since: id -> ?before: id ->
-             ?size: bool ->
+             ?all: bool -> ?limit: int -> ?size: bool ->
+             ?before: id_or_name ->
+             ?exited: int list ->
+             ?health: [`Starting | `Healthy | `Unhealthy | `None] list ->
+             ?name: string list ->
+             ?since: id_or_name ->
+             ?status: [`Created | `Restarting | `Running | `Removing |
+                       `Paused | `Exited | `Dead] list ->
+             ?volume: string ->
              unit -> t list
   (** [list ()] lists running containers (or all containers if [~all]
       is set to [true]).
 
       @param all Show all containers. Only running containers are
                  shown by default (i.e., this defaults to [false]).
+      @param limit Return this number of most recently created
+                   containers, including non-running ones.
+      @param size Return the size of container as fields [size_rw]
+                  and [size_root_fs].
+
+      The following options set filters on the returned container
+      list: [before], [exited] (containers with exit code given by
+      [exited]), [health], [name], [since], [status], [volume].
    *)
 
   type host_config = {
