@@ -702,7 +702,9 @@ module Container = struct
     let status, _, body =
       response_of_post "Docker.Container.create" addr
                        "/containers/create" query_params (Some json) in
-    if status >= 406 then
+    if status >= 409 then
+      raise(Invalid_argument("Docker.Container.create: " ^ body))
+    else if status >= 406 then
       raise(Invalid_argument("Docker.Container.create: \
                               Impossible to attach (container not running)"))
     else if status >= 400 then
