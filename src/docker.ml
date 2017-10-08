@@ -178,12 +178,12 @@ let delete fn_name addr url query =
   ignore(Unix.write fd (Buffer.to_bytes buf) 0 (Buffer.length buf));
   fd
 
-let status_of_delete fn_name addr url query =
+let response_of_delete fn_name addr url query =
   let fd = delete fn_name addr url query in
   Unix.shutdown fd Unix.SHUTDOWN_SEND;
-  let status, _, _ = read_response fn_name fd in
+  let r = read_response fn_name fd in
   Unix.close fd;
-  status
+  r
 
 (* Generic JSON utilities *)
 
@@ -195,6 +195,14 @@ let json_of_strings = function
   | [] -> `Null
   | l -> `List(List.map (fun s -> `String s) l)
 
+let message_of_body body =
+  match Json.from_string body with
+  | `Assoc l ->
+     (try (match List.assoc "message" l with
+           | `String m -> m
+           | j -> Json.to_string j)
+      with Not_found -> body)
+  | _ -> body
 
 (* Stream processing for [attach] and [Exec]. *)
 
@@ -815,8 +823,11 @@ module Container = struct
     let q = ["v", string_of_bool volumes;
              "force", string_of_bool force] in
     let path = "/containers/" ^ id in
-    let status = status_of_delete "Docker.Container.rm" addr path q in
-    if status >= 404 then raise(No_such_container id)
+    let status, _, body =
+      response_of_delete "Docker.Container.rm" addr path q in
+    if status >= 409 then
+      raise(Failure("Docker.Container.rm", message_of_body body))
+    else if status >= 404 then raise(No_such_container id)
     else if status >= 400 then
       raise(Invalid_argument("Docker.Container.rm"))
 
