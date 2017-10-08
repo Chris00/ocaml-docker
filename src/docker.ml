@@ -754,16 +754,11 @@ module Container = struct
                     "Impossible to attach (container not running)"))
     else if status >= 400 then (
       (* Try to extract the container ID. *)
-      match Json.from_string body with
-      | `Assoc l ->
-         (try
-            let m = List.assoc "message" l in
-            let m = string_of_json "Docker.Containers.create" m in
-            let i = String.index m ':' in
-            let id = String.sub m (i + 2) (String.length m - i - 2) in
-            raise(No_such_container id)
-         with _ -> raise(No_such_container "unknown ID"))
-      | _ -> raise(No_such_container "unknown ID")
+      try let m = message_of_body body in
+          let i = String.index m ':' in
+          let id = String.sub m (i + 2) (String.length m - i - 2) in
+          raise(No_such_container id)
+      with _ -> raise(No_such_container "unknown ID")
     );
     (* Extract ID *)
     match Json.from_string body with
@@ -882,16 +877,12 @@ module Container = struct
                                              addr path [] (Some json) in
       if status >= 400 then (
         (* Try to extract the container ID. *)
-        match Json.from_string body with
-        | `Assoc l ->
-           (try
-              let m = List.assoc "message" l in
-              let m = string_of_json "Docker.Containers.Exec.create" m in
-              let i = String.index m ':' in
-              let id = String.sub m (i + 2) (String.length m - i - 2) in
-              raise(No_such_container id)
-            with _ -> raise(No_such_container "unknown ID"))
-        | _ -> raise(No_such_container "unknown ID")
+        try
+          let m = message_of_body body in
+          let i = String.index m ':' in
+          let id = String.sub m (i + 2) (String.length m - i - 2) in
+          raise(No_such_container id)
+        with _ -> raise(No_such_container "unknown ID")
       );
       (* Extract ID *)
       match Json.from_string body with
