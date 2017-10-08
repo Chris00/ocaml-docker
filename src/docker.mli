@@ -11,8 +11,8 @@ val set_default_addr : Unix.sockaddr -> unit
 
 exception Invalid_argument of string [@warn_on_literal_pattern]
 (** [Invalid_argument msg] can be raised by any function
-    when an argument is incorrect.  [msg] is the function raising
-    the exception possibly followed by an explanation. *)
+    when an incorrect argument.  [msg] is the function raising
+    the exception. *)
 
 exception Failure of string * string [@warn_on_literal_pattern]
 (** [Failure(fn_name, msg)] is raised when the requested action fails

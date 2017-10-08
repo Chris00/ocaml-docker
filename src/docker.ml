@@ -489,7 +489,7 @@ module Container = struct
     let status, _, body = response_of_get "Docker.Container.list" addr
                                           "/containers/json" q in
     if status >= 400 then
-      raise(Invalid_argument("Docker.Container.list: Bad parameter"));
+      raise(Invalid_argument("Docker.Container.list"));
     match Json.from_string body with
     | `List l -> List.map container_of_json l
     | _ ->
@@ -804,7 +804,7 @@ module Container = struct
     if status >= 404 then
       raise(Failure("Docker.Container.rm", "No such container"))
     else if status >= 400 then
-      raise(Invalid_argument("Docker.Container.rm: Bad parameter"))
+      raise(Invalid_argument("Docker.Container.rm"))
 
   let kill ?(addr= !default_addr) ?signal id =
     let q = match signal with Some s -> ["signal", string_of_int s]
@@ -837,7 +837,7 @@ module Container = struct
       Unix.close fd;
       if status >= 404 then
         raise(Failure("Docker.Containers.attach", "No such container"))
-      else raise(Invalid_argument "Docker.Containers.attach: bad parameter")
+      else raise(Invalid_argument "Docker.Containers.attach")
     );
     Stream.create buf fd
 
