@@ -813,9 +813,11 @@ module Container = struct
     let path = "/containers/" ^ id ^ "/restart" in
     unit_response_of_post "Docker.Container.restart" addr path q None ~id
 
-  let rm ?(addr= !default_addr) ?(volumes=false) ?(force=false) id =
+  let rm ?(addr= !default_addr) ?(volumes=false) ?(force=false) ?(link=false)
+        id =
     let q = ["v", string_of_bool volumes;
-             "force", string_of_bool force] in
+             "force", string_of_bool force;
+             "link", string_of_bool link] in
     let path = "/containers/" ^ id in
     let status, _, body =
       response_of_delete "Docker.Container.rm" addr path q in

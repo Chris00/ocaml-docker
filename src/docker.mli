@@ -439,13 +439,16 @@ module Container : sig
                   if [`Stream], attach to stderr.  Default [false]. *)
 
   val rm : ?addr: Unix.sockaddr -> ?volumes: bool -> ?force: bool ->
+           ?link: bool ->
            id -> unit
   (** [rm id] remove the container [id] from the filesystem.
     @raise Docker.Invalid_argument if the container does not exist.
 
     @param volumes Remove the volumes associated to the container.
                    Default [false].
-    @param force Kill then remove the container.  Default [false]. *)
+    @param force Kill then remove the container.  Default [false].
+    @param link Remove the specified link associated with the container.
+                Default: [false].  *)
 
   (* val copy_file : ?addr: Unix.sockaddr -> id -> string -> stream *)
 
