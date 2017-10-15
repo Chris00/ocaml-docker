@@ -385,18 +385,16 @@ module Container : sig
   (* val export : ?addr: Unix.sockaddr -> id -> stream *)
   (** [export conn id] export the contents of container [id]. *)
 
-  val start : ?addr: Unix.sockaddr ->
-              ?binds: bind list ->
+  val start : ?addr: Unix.sockaddr -> ?detach_keys: string ->
               id -> unit
   (** [start id] starts the container [id].
-    BEWARE that the optinal arguments set here override the corresponding
-    ones of {!create}.
 
     @raise Server_error when, for example, if the command given by
-    {!create} does not exist in the container.
+     {!create} does not exist in the container.
 
-    @param binds directories shared between the host and the
-    container.  Each has the form [(host_dir, container_dir, access)]. *)
+    @param detach_keys override the key sequence for detaching a
+     container. Format is a single character [[a-Z]] or [ctrl-<value>]
+     where <value> is one of: [a-z], [@], [^], [\[], [,] or [_]. *)
 
   val stop : ?addr: Unix.sockaddr -> ?wait: int -> id -> unit
   (** [stop id] stops the container [id].
@@ -422,21 +420,16 @@ module Container : sig
 
 
   val attach : ?addr: Unix.sockaddr ->
-               ?logs: bool -> ?stream: bool ->
                ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
-               id -> Stream.t
+               id -> [`Logs | `Stream] -> Stream.t
   (** [attach id] view or interact with any running container [id]
     primary process (pid 1).
 
-    @param logs Return logs.  Default [false].
-    @param stream Return stream.  Default [false].
-    @param stdin If [stream=true], attach to stdin.  Default [false].
-    @param stdout If [logs=true], return stdout log,
-                  if [stream=true], attach to stdout.  Default [false].
-    @param stderr If [logs=true], return stderr log,
-                  if [stream=true], attach to stderr.  Default [false]. *)
-
-  (* val wait : ?addr: Unix.sockaddr -> id -> int *)
+    @param stdin If [`Logs], attach to stdin.  Default [false].
+    @param stdout If [`Logs], return stdout log,
+                  if [`Stream], attach to stdout.  Default [false].
+    @param stderr If [`Logs], return stderr log,
+                  if [`Stream], attach to stderr.  Default [false]. *)
 
   val rm : ?addr: Unix.sockaddr -> ?volumes: bool -> ?force: bool ->
            id -> unit

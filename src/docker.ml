@@ -163,9 +163,13 @@ let response_of_post fn_name addr url query json =
   Unix.close fd;
   r
 
-let unit_response_of_post fn_name addr url query json ~id =
+let status_response_of_post fn_name addr url query json ~id =
   let status, _, _ = response_of_post fn_name addr url query json in
-  if status >= 400 then raise(No_such_container id)
+  if status >= 404 then raise(No_such_container id);
+  status
+
+let unit_response_of_post fn_name addr url query json ~id =
+  ignore(status_response_of_post fn_name addr url query json ~id)
 
 let delete fn_name addr url query =
   let fd = connect fn_name addr in
@@ -716,7 +720,7 @@ module Container = struct
           ("AttachStdout", `Bool stdout);
           ("AttachStderr", `Bool stderr);
           ("ExposedPorts", `Null); (* TODO *)
-          ("Tty", `Bool false);
+          ("Tty", `Bool false); (* WARNING: see also [attach]. *)
           ("OpenStdin", `Bool open_stdin);
           ("StdinOnce", `Bool stdin_once);
           ("Env", json_of_strings env);
@@ -771,41 +775,23 @@ module Container = struct
                    "Response must be an association list: " ^ body ))
 
 
-  let start ?(addr= !default_addr) ?(binds=[])
-            id =
+  let start ?(addr= !default_addr) ?(detach_keys="") id =
     (* FIXME: may want to check that [id] does not contain special chars *)
-    (* Don't send options that have not been set because they override
-       those of [create]. *)
-    let j = match binds with [] -> ([]: (string * Json.json) list)
-                           | _ -> [("Binds", json_of_binds binds)] in
-    (* let j = ("Links", `Null) :: j in             (\* TODO *\) *)
-    (* let j = ("LxcConf", `List []) :: j in         (\* TODO *\) *)
-    (* let j = ("PortBindings", `Assoc []) :: j in   (\* TODO *\) *)
-    (* let j = ("PublishAllPorts", `Bool false) :: j in (\* TODO *\) *)
-    (* let j = ("Privileged", `Bool false) :: j in      (\* TODO *\) *)
-    (* let j = ("Dns", `Null) :: j in (\* TODO *\) *)
-    (* let j = ("DnsSearch", `Null) :: j in  (\* TODO *\) *)
-    (* let j = ("VolumesFrom", `List []) :: j in          (\* TODO *\) *)
-    (* let j = ("CapAdd", `Null) :: j in               (\* TODO *\) *)
-    (* let j = ("CapDrop", `Null) :: j in              (\* TODO *\) *)
-    (* let j = ("RestartPolicy", *)
-    (*          `Assoc [("Name", `String ""); *)
-    (*                  ("MaximumRetryCount", `Int 0)])  :: j in  (\* TODO *\) *)
-    (* let j = ("NetworkMode", `String "bridge") :: j in  (\* TODO *\) *)
-    (* let j = ("Devices", `List []) :: j in              (\* TODO *\) *)
+    let q = if detach_keys <> "" then ["detachKeys", detach_keys] else [] in
     let path = "/containers/" ^ id ^ "/start" in
-    unit_response_of_post "Docker.Container.start" addr path []
-                          (Some(`Assoc j)) ~id
+    let status = status_response_of_post "Docker.Container.start" addr path q
+                   None ~id in
+    if status >= 304 then
+      raise(Failure("Docker.Container.start", "Container already started"))
 
 
   let stop ?(addr= !default_addr) ?wait id =
     let q = match wait with None -> []
                           | Some t -> ["t", string_of_int t] in
     let path = "/containers/" ^ id ^ "/stop" in
-  let status, _, _ =
-      response_of_post "Docker.Container.stop" addr path q None in
-    if status >= 404 then raise(No_such_container id)
-    else if status >= 304 then
+    let status =
+      status_response_of_post "Docker.Container.stop" addr path q None ~id in
+    if status >= 304 then
       raise(Failure("Docker.Container.stop", "Container already stopped"))
 
   let restart ?(addr= !default_addr) ?wait id =
@@ -843,8 +829,11 @@ module Container = struct
     unit_response_of_post "Docker.Container.unpause" addr path [] None ~id
 
 
-  let attach ?(addr= !default_addr) ?(logs=false) ?(stream=false)
-             ?(stdin=false) ?(stdout=false) ?(stderr=false) id =
+  let attach ?(addr= !default_addr)
+             ?(stdin=false) ?(stdout=false) ?(stderr=false) id which =
+    let logs, stream = match which with
+      | `Logs -> true, false
+      | `Stream -> false, true in
     let q = ["logs", string_of_bool logs;
              "stream", string_of_bool stream;
              "stdin", string_of_bool stdin;
@@ -860,6 +849,8 @@ module Container = struct
       if status >= 404 then raise(No_such_container id)
       else raise(Invalid_argument "Docker.Containers.attach")
     );
+    (* FIXME: need to know whether the TTY setting is enabled by
+       [create] — [false] at the moment. *)
     Stream.create buf fd
 
   module Exec = struct
