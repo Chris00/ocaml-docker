@@ -933,7 +933,12 @@ module Container = struct
       let buf = Buffer.create 4096 in
       let status, h = read_headers "Docker.Containers.Exec.start" buf fd in
       deal_with_status_500 "Docker.Containers.Exec.start" status buf fd;
-      if status >= 400 then (
+      if status >= 409 then (
+        Unix.close fd;
+        raise(Failure("Docker.Container.Exec.start",
+                      "Container is stopped or paused"));
+      )
+      else if status >= 400 then (
         Unix.close fd;
         raise(Failure("Docker.Container.Exec.start", "No such exec instance"));
       );
