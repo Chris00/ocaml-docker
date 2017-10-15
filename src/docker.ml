@@ -774,6 +774,28 @@ module Container = struct
        raise(Error("Docker.Container.create",
                    "Response must be an association list: " ^ body ))
 
+  let change_of_json = function
+    | `Assoc c ->
+       (try let path = List.assoc "Path" c in
+            let kind = match List.assoc "Kind" c with
+              | `Int 0 -> `Modified
+              | `Int 1 -> `Added
+              | `Int 2 -> `Deleted
+              | j -> raise(Error("Docker.Container.changes",
+                                 "Invalid kind:" ^ Json.to_string j)) in
+            (string_of_json "Docker.Container.changes" path, kind)
+        with Not_found -> raise(Error("Docker.Container.changes",
+                                      "Invalid change object")))
+    | j -> raise(Error("Docker.Container.changes",
+                       "object expected, got: " ^ Json.to_string j))
+
+  let changes ?(addr= !default_addr) id =
+    let path = "/containers/" ^ id ^ "/changes" in
+    let _, _, body = response_of_get "Docker.Container.changes" addr path [] in
+    match Json.from_string body with
+    | `List l -> List.map change_of_json l
+    | _ -> raise(Error("Docker.Container.changes", "Invalid response: " ^ body))
+
 
   let start ?(addr= !default_addr) ?(detach_keys="") id =
     (* FIXME: may want to check that [id] does not contain special chars *)

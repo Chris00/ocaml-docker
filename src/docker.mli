@@ -382,8 +382,10 @@ module Container : sig
 
   (* val logs : conn -> id -> *)
 
-  (* val changes : conn -> id -> *)
-  (** [changes conn id] Inspect changes on container [id]'s filesystem. *)
+  val changes : ?addr: Unix.sockaddr ->
+                id -> (string * [`Modified | `Added | `Deleted]) list
+  (** [changes conn id] returns which files in a container's
+     filesystem have been added, deleted, or modified. *)
 
   (* val export : ?addr: Unix.sockaddr -> id -> stream *)
   (** [export conn id] export the contents of container [id]. *)
@@ -449,8 +451,6 @@ module Container : sig
     @param force Kill then remove the container.  Default [false].
     @param link Remove the specified link associated with the container.
                 Default: [false].  *)
-
-  (* val copy_file : ?addr: Unix.sockaddr -> id -> string -> stream *)
 
   module Exec : sig
     type t
