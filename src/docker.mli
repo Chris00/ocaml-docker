@@ -1,7 +1,10 @@
 
-(** Interface to Docker Remote API <https://www.docker.com>.
+(** Interface to Docker Remote API.
 
-    @version %%VERSION%% *)
+   See the {{:https://docs.docker.com/engine/api/v1.29/}Docker API} if
+   needed to complement the documentation below.
+
+   @version %%VERSION%% *)
 
 
 val set_default_addr : Unix.sockaddr -> unit
