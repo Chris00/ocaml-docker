@@ -794,6 +794,19 @@ module Container = struct
     if status >= 304 then
       raise(Failure("Docker.Container.stop", "Container already stopped"))
 
+  let wait ?(addr= !default_addr) id =
+    let path = "/containers/" ^ id ^ "/wait" in
+    let _, _, body = response_of_post "Docker.Container.wait"
+                       addr path [] None in
+    match Json.from_string body with
+    | `Assoc l ->
+       (try (match List.assoc "StatusCode" l with
+             | `Int s -> s
+             | _ -> raise(Error("Docker.Container.wait", "Invalid StatusCode")))
+        with Not_found ->
+          raise(Error("Docker.Container.wait", "Invalid response: " ^ body)))
+    | _ -> raise(Error("Docker.Container.wait", "Invalid response: " ^ body))
+
   let restart ?(addr= !default_addr) ?wait id =
     let q = match wait with None -> []
                           | Some t -> ["t", string_of_int t] in

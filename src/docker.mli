@@ -400,6 +400,10 @@ module Container : sig
   (** [stop id] stops the container [id].
       @param wait number of seconds to wait before killing the container. *)
 
+  val wait : ?addr: Unix.sockaddr -> id -> int
+  (** [wait id] block until a container [id] stops, then returns the
+     exit code.  *)
+
   val restart : ?addr: Unix.sockaddr -> ?wait: int -> id -> unit
   (** [restart id] restart the container [id].
 
