@@ -3,7 +3,7 @@ module C = Docker.Container
 
 let () =
   let c = C.create "debian:latest" ["dash"; "-s"] ~open_stdin: true
-                   ~binds:[C.Mount("_build/", "/tmp/b")] in
+            ~host:(C.host () ~binds:[C.Mount("_build/", "/tmp/b")]) in
   C.start c;
   ignore(C.Exec.(start (create c ["touch"; "/tmp/b/bind.txt"])));
   let e = C.Exec.create c ["ls"; "-l"; "/tmp/b"] in

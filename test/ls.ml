@@ -4,7 +4,7 @@ let show_stream () =
   let cmd = ["ls"; "-l"] in
   let c = Docker.Container.create "debian:latest" cmd in
   Docker.Container.start c;
-  let st = Docker.Container.attach c ~stdout:true ~stream:true in
+  let st = Docker.Container.attach c ~stdout:true `Stream in
   let _, s = Docker.Stream.read st ~timeout:5. in
   Docker.Container.stop c;
   Docker.Container.rm c;
@@ -16,7 +16,7 @@ let show_logs () =
   let c = Docker.Container.create "debian:latest" cmd in
   Docker.Container.start c;
   Unix.sleep 1;
-  let s = Docker.Container.attach c ~stdout:true ~logs:true in
+  let s = Docker.Container.attach c ~stdout:true `Logs in
   let a = Docker.Stream.read_all s in
   Docker.Container.stop c;
   Docker.Container.rm c;
