@@ -1,7 +1,7 @@
 opam-version: "1.2"
 maintainer: "Christophe Troestler <Christophe.Troestler@umons.ac.be>"
 authors: [ "Christophe Troestler <Christophe.Troestler@umons.ac.be>" ]
-license: "LGPL-3.0 with OCaml linking exception"
+license: "ISC"
 homepage: "https://github.com/Chris00/ocaml-docker"
 dev-repo: "https://github.com/Chris00/ocaml-docker.git"
 bug-reports: "https://github.com/Chris00/ocaml-docker/issues"
