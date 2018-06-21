@@ -869,10 +869,10 @@ module Container = struct
   let attach ?(addr= !default_addr)
              ?(stdin=false) ?(stdout=false) ?(stderr=false) id which =
     let logs, stream = match which with
-      | `Logs -> true, false
-      | `Stream -> false, true in
-    let q = ["logs", string_of_bool logs;
-             "stream", string_of_bool stream;
+      | `Logs ->   "true",  "false"
+      | `Stream -> "false", "true" in
+    let q = ["logs", logs;
+             "stream", stream;
              "stdin", string_of_bool stdin;
              "stdout", string_of_bool stdout;
              "stderr", string_of_bool stderr ] in
