@@ -3,6 +3,9 @@ OCaml client for Docker Remote API
 
 This library provides an OCaml client for
 [Docker Remote API](https://docs.docker.com/reference/api/docker_remote_api/).
+This library is tested with the
+[community edition](https://docs.docker.com/engine/installation/)
+of Docker.
 
 Note that the OPAM and ocamlfind packages are called `docker-api` (to
 distinguish them from other packages related to Docker) but the OCaml
