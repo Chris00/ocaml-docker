@@ -5,6 +5,10 @@
   (libraries (docker-api str))))
 
 (alias
+ ((name tests)
+  (deps (version.exe ls.exe exec.exe bind.exe robust.exe ps.exe))))
+
+(alias
  ((name    runtest)
   (deps    (version.exe))
   (action  (run ${<}))))
