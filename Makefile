@@ -4,12 +4,10 @@ WEB = san@math.umons.ac.be:public_html/software
 PKGVERSION = $(shell git describe --always --dirty)
 
 all build byte native:
-	jbuilder build @install #--dev
+	jbuilder build @install --dev
 
 test runtest:
-# Force the tests to be run
-	$(RM) -rf _build/default/tests/
-	jbuilder runtest
+	jbuilder runtest --force
 
 install uninstall:
 	jbuilder $@
