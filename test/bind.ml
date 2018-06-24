@@ -2,9 +2,12 @@ open Printf
 module C = Docker.Container
 
 let () =
+  (* The bind.dir directory will be created with root ownership. *)
   let c = C.create "debian:latest" ["dash"; "-s"] ~open_stdin: true
-            ~host:(C.host () ~binds:[C.Mount("_build/", "/tmp/b")]) in
+            ~host:(C.host () ~binds:[C.Mount("bind.dir", "/tmp/b")]) in
   C.start c;
+  (* Allow a non-root user to remove the dir: *)
+  ignore(C.Exec.(start (create c ["chmod"; "ugo+w"; "/tmp/b"])));
   ignore(C.Exec.(start (create c ["touch"; "/tmp/b/bind.txt"])));
   let e = C.Exec.create c ["ls"; "-l"; "/tmp/b"] in
   let st = C.Exec.start e in
