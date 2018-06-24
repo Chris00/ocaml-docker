@@ -758,11 +758,14 @@ module Container = struct
                     "Impossible to attach (container not running)"))
     else if status >= 400 then (
       (* Try to extract the container ID. *)
-      try let m = message_of_body body in
-          let i = String.index m ':' in
-          let id = String.sub m (i + 2) (String.length m - i - 2) in
-          raise(No_such_container id)
-      with _ -> raise(No_such_container "unknown ID")
+      match message_of_body body with
+      | m -> (try let i = String.index m ':' in
+                 let id = String.sub m (i + 2) (String.length m - i - 2) in
+                 raise(No_such_container id)
+              with _ ->
+                raise(Failure("Docker.Container.create", m)))
+      | exception Yojson.Json_error _ ->
+         raise(Server_error (Printf.sprintf "body %S contains no message" body))
     );
     (* Extract ID *)
     match Json.from_string body with
