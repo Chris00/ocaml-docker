@@ -12,15 +12,14 @@ test runtest:
 install uninstall:
 	jbuilder $@
 
-doc:
+doc: all
 	sed -e 's/%%VERSION%%/$(PKGVERSION)/' src/docker.mli \
 	  > _build/default/src/docker.mli
 	jbuilder build @doc
-	echo '.def { background: #f0f0f0; }' >> _build/default/_doc/odoc.css
 
 upload-doc: doc
-	scp -C -r _build/default/_doc/docker-api/Docker $(WEB)/doc
-	scp -C _build/default/_doc/odoc.css $(WEB)/
+	scp -C -r _build/default/_doc/_html/docker-api/Docker $(WEB)/doc
+	scp -C _build/default/_doc/_html/odoc.css $(WEB)/
 
 lint:
 	opam lint docker-api.opam

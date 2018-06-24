@@ -4,7 +4,6 @@
  ((name        docker)
   (public_name docker-api)
   (synopsis "Binding to the Docker Remote API")
-  (wrapped  false)
   (libraries (bytes unix yojson))))
 
 (rule

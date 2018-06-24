@@ -464,12 +464,12 @@ module Container : sig
                  ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
                  id -> string list -> t
     (** [exec id cmd] sets up an exec instance in the {i running}
-      container [id] that executes [cmd].  [cmd] has the form [[prog;
-      arg1;...; argN]].  This command will not be restarted if the
-      container is restarted.  If the container is paused, then the
+      container [id] that executes [cmd].  The command [cmd] has the
+      form [[prog; arg1;...; argN]].  It will not be restarted if the
+      container is (restarted).  If the container is paused, then the
       command will wait until the container is unpaused, and then run.
-      The output of this command is not logged by the container.  If
-      the command does not exist, an message will be printed on the
+      The output of this command is {i not} logged by the container.  If
+      the command does not exist, a message will be printed on the
       stderr component of the stream returned by {!start}.
 
       @param stdin whether to attach stdin.  Default: [false].
