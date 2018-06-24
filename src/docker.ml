@@ -870,7 +870,8 @@ module Container = struct
              ?(stdin=false) ?(stdout=false) ?(stderr=false) id which =
     let logs, stream = match which with
       | `Logs ->   "true",  "false"
-      | `Stream -> "false", "true" in
+      | `Stream -> "false", "true"
+      | `Logs_and_stream -> "true", "true" in
     let q = ["logs", logs;
              "stream", stream;
              "stdin", string_of_bool stdin;

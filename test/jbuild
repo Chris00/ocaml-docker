@@ -16,7 +16,9 @@
 (alias
  ((name    runtest)
   (deps    (ls.exe))
-  (action  (run ${<}))))
+  (action  (progn
+            (run ${<})
+            (run ${<} --logs)))))
 
 (alias
  ((name    runtest)

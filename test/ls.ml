@@ -1,15 +1,16 @@
 open Printf
 
 let show_stream () =
-  let cmd = ["ls"; "-l"] in
+  let cmd = ["bash"; "-c"; "echo 1; sleep 0.1; echo 2; sleep 0.1; echo 3"] in
   let c = Docker.Container.create "debian:latest" cmd in
   Docker.Container.start c;
-  let st = Docker.Container.attach c ~stdout:true `Stream in
-  let _, s = Docker.Stream.read st ~timeout:5. in
-  Docker.Container.stop c;
+  let st = Docker.Container.attach c `Stream ~stdout:true in
+  let a = Docker.Stream.read_all st in
+  (try Docker.Container.stop c
+   with Docker.Failure(_, msg) -> printf "Docker.Failure: %s\n" msg);
   Docker.Container.rm c;
-  printf "%S in the container returned (stream):\n%s\n"
-         (String.concat " " cmd) s
+  printf "%S in the container returned (stream):\n> %s\n"
+         (String.concat " " cmd) (String.concat "> " (List.map snd a))
 
 let show_logs () =
   let cmd = ["ls"; "-l"] in
@@ -18,7 +19,8 @@ let show_logs () =
   Unix.sleep 1;
   let s = Docker.Container.attach c ~stdout:true `Logs in
   let a = Docker.Stream.read_all s in
-  Docker.Container.stop c;
+  (try Docker.Container.stop c
+   with Docker.Failure(_, msg) -> printf "Docker.Failure: %s\n" msg);
   Docker.Container.rm c;
   printf "%S in the container returned (logs):\n> %s\n"
          (String.concat " " cmd) (String.concat "> " (List.map snd a))

@@ -430,15 +430,20 @@ module Container : sig
 
   val attach : ?addr: Unix.sockaddr ->
                ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
-               id -> [`Logs | `Stream] -> Stream.t
-  (** [attach id] view or interact with any running container [id]
-    primary process (pid 1).
+               id -> [`Logs | `Stream | `Logs_and_stream] -> Stream.t
+  (** [attach id what] view or interact with any running container
+     [id] primary process (pid 1).
+     - If [what = `Logs] replay the logs from the container: you will
+       get the output since the container started.
+     - If [what = `Stream], stream [stdin], [stdout] and [stderr] (if
+       enabled) from the time the request was made onwards.
+     - If [what = `Logs_and_stream] after getting the output of
+       [`Logs], it will seamlessly transition into streaming current
+       output.
 
-    @param stdin If [`Logs], attach to stdin.  Default [false].
-    @param stdout If [`Logs], return stdout log,
-                  if [`Stream], attach to stdout.  Default [false].
-    @param stderr If [`Logs], return stderr log,
-                  if [`Stream], attach to stderr.  Default [false]. *)
+     @param stdin attach to stdin.  Default [false].
+     @param stdout return and/or attach to stdout.  Default [false].
+     @param stderr return and/or attach to stderr.  Default [false]. *)
 
   val rm : ?addr: Unix.sockaddr -> ?volumes: bool -> ?force: bool ->
            ?link: bool ->
