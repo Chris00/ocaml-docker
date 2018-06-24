@@ -21,17 +21,23 @@ The easier way to install this library is to use
 
     opam install docker-api
 
-This library depends on `ocamlfind >= 1.5.5`, `uri`, and `yojson`.
-For the development version, you also need `oasis >= 0.4`.
+This library depends on [Dune](https://github.com/ocaml/dune) (to
+compile), `uri`, and `yojson`.
 
-To compile, just type `make` and then `make install` to install it using
-`ocamlfind`.
+To compile as a developer, just type `make` and then `make install` to
+install it.
+
+Documentation
+-------------
+
+Please read the [interface](src/docker.mli) or the
+[HTML version](http://math.umons.ac.be/an/software/doc/Docker/).
 
 
 Testing
 -------
 
-If you compile using `make`, the tests will be built (symbolic links
-to the executables will be present at the root of this project).  In
-order to run them, make sure that the latest Debian image is installed
-— if not, simply issue `docker pull debian:latest` in a shell.
+If you compile using `make`, the tests will be built.  In order to run
+them, make sure that the latest Debian image is installed — if not,
+simply issue `docker pull debian:latest` in a shell — and issue `make
+test`.
