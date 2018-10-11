@@ -118,16 +118,19 @@ let deal_with_status_500 fn_name status fd =
     raise(Server_error fn_name);
   )
 
-let get fn_name addr url query =
+let[@inline] send_buffer fn_name addr buf =
   let fd = connect fn_name addr in
+  ignore(Unix.write fd (Buffer.to_bytes buf) 0 (Buffer.length buf));
+  fd
+
+let get fn_name addr url query =
   let buf = Buffer.create 256 in
   Buffer.add_string buf "GET /v1.29";
   Buffer.add_string buf url;
   Buffer.add_encoded_query buf query;
   Buffer.add_string buf Docker_config.http11_header;
   Buffer.add_string buf "\r\n";
-  ignore(Unix.write fd (Buffer.to_bytes buf) 0 (Buffer.length buf));
-  fd
+  send_buffer fn_name addr buf
 
 let response_of_get fn_name addr url query =
   let fd = get fn_name addr url query in
@@ -136,13 +139,18 @@ let response_of_get fn_name addr url query =
   Unix.close fd;
   r
 
-let post fn_name  addr url query json =
-  let fd = connect fn_name addr in
+(* Return a buffer containing the beginning of the header, excluding
+   Content-* headers. *)
+let[@inline] post_header url query =
   let buf = Buffer.create 4096 in
   Buffer.add_string buf "POST /v1.29";
   Buffer.add_string buf url;
   Buffer.add_encoded_query buf query;
   Buffer.add_string buf Docker_config.http11_header;
+  buf
+
+let post fn_name  addr url query json =
+  let buf = post_header url query in
   Buffer.add_string buf "Content-Type: application/json\r\n\
                          Content-Length: ";
   (match json with
@@ -153,8 +161,7 @@ let post fn_name  addr url query json =
       Buffer.add_string buf (string_of_int (String.length json));
       Buffer.add_string buf "\r\n\r\n";
       Buffer.add_string buf json);
-  ignore(Unix.write fd (Buffer.to_bytes buf) 0 (Buffer.length buf));
-  fd
+  send_buffer fn_name addr buf
 
 let response_of_post fn_name addr url query json =
   let fd = post fn_name addr url query json in
@@ -954,7 +961,7 @@ module Container = struct
   end
 end
 
-module Images = struct
+module Image = struct
   type id = string
   type t = {
       id: id;
@@ -993,7 +1000,47 @@ module Images = struct
        raise(Error("Docker.Images.list",
                    "Response must be a JSON list: " ^ body))
 
+  type source =
+    | Image of { name: string;  repo: string;  tag: string }
+    | Src of string
+    | Stdin of { len: int;  write : Unix.file_descr -> int -> unit }
 
+  let create ?(addr= !default_addr) ?(platform="") from =
+    let q = ["platform", platform] in
+    let status = match from with
+      | Image im ->
+         let q = ("fromImage", im.name) :: ("repo", im.repo)
+                 :: ("tag", im.tag) :: q in
+         let status, _, _ = response_of_post "Docker.Image.create"
+                              addr "/images/create" q None in
+         status
+      | Src url ->
+         if url = "-" then
+           raise(Invalid_argument("Docker.Image.create: Invalid URL '-'"));
+         let q = ("fromSrc", url) :: q in
+         let status, _, _ = response_of_post "Docker.Image.create"
+                              addr "/images/create" q None in
+         status
+      | Stdin img ->
+         (* We do not use the [response_of_post] function because we
+            use a specialized version to insert the body. *)
+         let buf = post_header "/images/create" q in
+         Buffer.add_string buf "Content-Type: application/octet-stream\r\n\
+                                Content-Length: ";
+         Buffer.add_string buf (string_of_int img.len);
+         Buffer.add_string buf "\r\n\r\n";
+         let fd = send_buffer "Docker.Image.create" addr buf in
+         img.write fd img.len;
+         Unix.shutdown fd Unix.SHUTDOWN_SEND;
+         let status, _, _ = read_response "Docker.Image.create" fd in
+         Unix.close fd;
+         status in
+    if status >= 404 then
+      raise(Failure("Docker.Image.create", "repository does not exist \
+                                            or no read access"))
+
+  let from_image ?(repo = "") ?(tag = "") name =
+    Image { name;  repo;  tag }
 end
 
 type version = { api_version: string;

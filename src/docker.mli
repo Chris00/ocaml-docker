@@ -483,7 +483,7 @@ module Container : sig
   end
 end
 
-module Images : sig
+module Image : sig
   type id = string
 
   type t = {
@@ -495,11 +495,39 @@ module Images : sig
     }
 
   val list : ?addr: Unix.sockaddr -> ?all: bool -> unit -> t list
+  (** [list ()] return the list of images.
+     @param all return all images.  Default: [false]. *)
 
-  (* val create : ?addr: Unix.sockaddr -> *)
-  (*              ?from_image: string -> ?from_src: string -> ?repo: string -> *)
-  (*              ?tag: string -> ?registry: string *)
-  (*              -> stream *)
+  (** See {!create}. *)
+  type source =
+    | Image of { name: string;  repo: string;  tag: string }
+    | Src of string
+    | Stdin of { len: int;  write : Unix.file_descr -> int -> unit }
+
+  val create : ?addr: Unix.sockaddr -> ?platform: string ->
+               source -> unit
+  (** [create from] creates an image by either pulling it from a
+     registry or importing it.
+     - [`Image img] provides the name [img.name] of the image.  The
+       name may include a tag or digest [img.tag].  If [img.tag] is
+       empty when pulling an image, it causes all tags for the given
+       image to be pulled.
+     - [`Src url] provides the [url] from which the image can be
+       retrieved.
+     - [`Stdin img] provides the image as its length [img.len] and a
+       function [img.write fd len] that will write the image on [fd].
+
+     @param repo Repository name given to an image when it is
+                 imported. The repo may include a tag. This parameter
+                 may only be used when importing an image.
+     @param tag Tag or digest. If empty when pulling an image, this
+                causes all tags for the given image to be pulled.
+     @param platform Platform in the format os\[/arch\[/variant\]\].
+                     Default: [""]. *)
+
+  val from_image : ?repo: string -> ?tag: string -> string -> source
+  (** [from_image name] convenience function that returns an [Image]
+     source. *)
 
   (* val insert : ?addr: Unix.sockaddr -> name -> string -> stream *)
 
@@ -524,7 +552,7 @@ module Images : sig
   (* val search : ?addr: Unix.sockaddr -> string -> search_result list *)
 
   (* val build : ?addr: Unix.sockaddr -> unit -> stream *)
-
+  ;;
 end
 
 (* val auth : ?addr: Unix.sockaddr -> *)
