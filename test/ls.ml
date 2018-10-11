@@ -1,7 +1,7 @@
 open Printf
 
 let show_stream () =
-  let cmd = ["bash"; "-c"; "echo 1; sleep 0.1; echo 2; sleep 0.1; echo 3"] in
+  let cmd = ["ls"; "-l"] in
   let c = Docker.Container.create "debian:latest" cmd in
   Docker.Container.start c;
   let st = Docker.Container.attach c `Stream ~stdout:true in
@@ -32,5 +32,6 @@ let () =
     ] in
   Arg.parse (Arg.align args) (fun _ -> raise(Arg.Bad "no anonymous argument"))
             "ls <options>";
+  Docker.Image.(create (from_image "debian" ~tag:"latest"));
   if !logs then show_logs ()
   else show_stream ()

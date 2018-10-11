@@ -2,6 +2,7 @@ open Printf
 module C = Docker.Container
 
 let () =
+  Docker.Image.(create (from_image "alpine" ~tag:"latest"));
   let cmd = ["sleep"; "0.3"] in
   let c = C.create "alpine:latest" ~name:"waiting_container" cmd in
   printf "Created container id: %s\n%!" c;

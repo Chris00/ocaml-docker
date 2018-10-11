@@ -2,6 +2,7 @@ open Printf
 module C = Docker.Container
 
 let () =
+  Docker.Image.(create (from_image "debian" ~tag:"latest"));
   (* The bind.dir directory will be created with root ownership. *)
   let c = C.create "debian:latest" ["dash"; "-s"] ~open_stdin: true
             ~host:(C.host () ~binds:[C.Mount("bind.dir", "/tmp/b")]) in
