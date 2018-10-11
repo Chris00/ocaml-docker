@@ -6,7 +6,10 @@
 - Add functions `Container.wait` and `Container.changes`.
 - Handle errors `409 Conflict`.
 - New exceptions `Docker.Failure` and `Docker.No_such_container`.
-- New tests `ls` and `ps`.
+- Rename `Docker.Images` as `Docker.Image` and add the `create`
+  function to pull images.
+- Documentation improvements.
+- New tests `ls` and `ps` and improve the other ones.
 - Use [Dune](https://github.com/ocaml/dune) and
   [dune-release](https://github.com/samoht/dune-release).
 
