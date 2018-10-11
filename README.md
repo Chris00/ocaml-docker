@@ -31,7 +31,7 @@ Documentation
 -------------
 
 Please read the [interface](src/docker.mli) or the
-[HTML version](http://math.umons.ac.be/an/software/doc/Docker/).
+[HTML version](http://chris00.github.io/ocaml-docker/doc/docker-api/Docker/).
 
 
 Testing
