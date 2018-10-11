@@ -7,13 +7,13 @@ dev-repo: "git+https://github.com/Chris00/ocaml-docker.git"
 bug-reports: "https://github.com/Chris00/ocaml-docker/issues"
 doc: "https://Chris00.github.io/ocaml-docker/doc"
 build: [
-  [ "jbuilder" "subst" ] {pinned}
-  [ "jbuilder" "build" "-p" name "-j" jobs ]
-  [ "jbuilder" "runtest" "-p" name "-j" jobs ] {with-test}
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
 ]
 depends: [
   "ocaml" {>= "4.02.3"}
-  "jbuilder" {build}
+  "dune" {build}
   "base-bytes"
   "base-unix"
   "yojson"

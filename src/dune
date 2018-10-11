@@ -1,0 +1,10 @@
+(library
+ (name        docker)
+ (public_name docker-api)
+ (libraries bytes unix yojson)
+ (synopsis "Binding to the Docker Remote API"))
+
+(rule
+ (targets docker_config.ml docker_utils.ml)
+ (deps    (:p ../compatibility.ml) docker_config.pre.ml docker_utils.pre.ml)
+ (action  (run ocaml %{p})))
