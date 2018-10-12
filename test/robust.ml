@@ -26,7 +26,7 @@ let ranges_to_string l =
   String.concat "," (List.map to_string l)
 
 let () =
-  Docker.Image.(create (from_image "debian" ~tag:"latest"));
+  Common.install_image "debian" ~tag:"latest";
   let c = C.create "debian:latest" ["bash"; "-s"] ~open_stdin:true in
   C.start c;
   (* Check that sequences of integers created by `seq` in the

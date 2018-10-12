@@ -32,6 +32,6 @@ let () =
     ] in
   Arg.parse (Arg.align args) (fun _ -> raise(Arg.Bad "no anonymous argument"))
             "ls <options>";
-  Docker.Image.(create (from_image "debian" ~tag:"latest"));
+  Common.install_image "debian" ~tag:"latest";
   if !logs then show_logs ()
   else show_stream ()
