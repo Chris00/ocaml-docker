@@ -5,7 +5,7 @@ let () =
   Common.install_image "debian" ~tag:"latest";
   let c = C.create "debian:latest" ["bash"; "-s"] ~open_stdin:true in
   C.start c;
-  let e = C.Exec.create c ["ls"; "/"] in
+  let e = C.Exec.create c ["ls"; "-lp"; "/"] in
   let st = C.Exec.start e in
   (* fprintf (Docker.Stream.out st) "ls -l /home/\n%!"; *)
   let s = Docker.Stream.read_all st in
