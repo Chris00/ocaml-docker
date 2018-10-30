@@ -811,8 +811,13 @@ module Container = struct
     (* FIXME: may want to check that [id] does not contain special chars *)
     let q = if detach_keys <> "" then ["detachKeys", detach_keys] else [] in
     let path = "/containers/" ^ id ^ "/start" in
-    let status = status_response_of_post "Docker.Container.start" addr path q
-                   None ~id in
+    let status, _, body = response_of_post "Docker.Container.start" addr path q
+                            None in
+    if status >= 404 then raise(No_such_container id);
+    if status >= 400 then
+      (* This is an undocumented status that is raised when the
+         command asked to run in [create] does not exist. *)
+      raise(Failure("Docker.Container.start", message_of_body body));
     if status >= 304 then
       raise(Failure("Docker.Container.start", "Container already started"))
 

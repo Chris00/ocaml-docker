@@ -1,10 +1,11 @@
 (executables
- (names     version ls exec bind robust ps no_image)
+ (names     version ls exec bind robust ps no_image no_cmd)
  (libraries docker-api str))
 
 (alias
  (name tests)
- (deps version.exe ls.exe exec.exe bind.exe robust.exe ps.exe no_image.exe))
+ (deps version.exe ls.exe exec.exe bind.exe robust.exe ps.exe no_image.exe
+       no_cmd.exe))
 
 (alias
  (name    runtest)
@@ -41,4 +42,9 @@
 (alias
  (name    runtest)
  (deps    no_image.exe)
+ (action  (run %{deps})))
+
+(alias
+ (name    runtest)
+ (deps    no_cmd.exe)
  (action  (run %{deps})))
