@@ -1,3 +1,8 @@
+0.2.1 2018-10-30
+----------------
+
+- Handle an undocumented status for `Docker.Container.start`.
+
 0.2 2017-10-15
 --------------
 
