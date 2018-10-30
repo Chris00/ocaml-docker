@@ -7,7 +7,6 @@ let () =
   try
     let c = C.create "alpine:latest" ["/bin/bash"] ~open_stdin:true in
     C.start c;
-    printf "Running...\n";
-    C.stop c
+    assert false
   with Docker.Failure _ as e ->
     printf "Raised %s\n" (Printexc.to_string e)
