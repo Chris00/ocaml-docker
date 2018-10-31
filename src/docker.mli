@@ -462,6 +462,8 @@ module Container : sig
 
     val create : ?addr: Unix.sockaddr ->
                  ?stdin: bool -> ?stdout: bool -> ?stderr: bool ->
+                 ?detach_keys: string ->
+                 ?env: string list -> ?privileged: bool -> ?user: string ->
                  id -> string list -> t
     (** [exec id cmd] sets up an exec instance in the {i running}
       container [id] that executes [cmd].  The command [cmd] has the
@@ -474,7 +476,17 @@ module Container : sig
 
       @param stdin whether to attach stdin.  Default: [false].
       @param stdout whether to attach stdout.  Default: [true].
-      @param stderr whether to attach stderr.  Default: [true]. *)
+      @param stderr whether to attach stderr.  Default: [true].
+      @param detach_keys Override the key sequence for detaching a
+               container.  Format is a single character \[a-Z\] or
+               ctrl-<value> where <value> is one of: a-z, @, ^, \[, ,
+               or _.
+      @param env A list of environment variables of the form ["VAR=value"].
+               A variable without = is removed from the environment, rather
+               than to have an empty value.
+      @param user The user, and optionally, group to run the exec
+                  process inside the container. Format is one of:
+                  user, user:group, uid, or uid:gid. *)
 
     val start : ?addr: Unix.sockaddr -> t -> Stream.t
     (** [start exec_id] starts a previously set up exec instance

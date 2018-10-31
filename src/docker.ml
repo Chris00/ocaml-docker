@@ -910,17 +910,25 @@ module Container = struct
     type t = string (* exec ID *)
 
     let create ?(addr= !default_addr) ?(stdin=false) ?(stdout=true)
-               ?(stderr=true) container cmd =
+          ?(stderr=true) ?detach_keys ?(env=[]) ?(privileged=false) ?user
+          container cmd =
       let json =
-        `Assoc ["AttachStdin", `Bool stdin;
+        ["AttachStdin", `Bool stdin;
                 "AttachStdout", `Bool stdout;
                 "AttachStderr", `Bool stderr;
                 "Tty", `Bool false;
+                "Env", json_of_strings env;
                 "Cmd", json_of_strings cmd;
-                "Container", `String container ] in
+                "Privileged", `Bool privileged ] in
+      let json = match detach_keys with
+        | Some d -> ("DetachKeys", `String d) :: json
+        | None -> json in
+      let json = match user with
+        | Some u -> ("User", `String u) :: json
+        | None -> json in
       let path = "/containers/" ^ container ^ "/exec" in
       let status, _, body = response_of_post "Docker.Container.Exec.create"
-                                             addr path [] (Some json) in
+                              addr path [] (Some (`Assoc json)) in
       if status >= 400 then (
         (* Try to extract the container ID. *)
         try
