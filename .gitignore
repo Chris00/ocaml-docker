@@ -5,3 +5,5 @@ src/docker_utils.ml
 src/docker_config.ml
 *.tar.gz
 bind.dir/
+INFO.org
+PROBLEMS.md
