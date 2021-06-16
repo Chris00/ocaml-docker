@@ -8,7 +8,10 @@ exception Server_error of string
 exception Error of string * string
 
 let default_addr =
-  ref(Unix.ADDR_UNIX "/var/run/docker.sock")
+  if Sys.win32 then
+    ref(Unix.ADDR_INET (Unix.inet_addr_of_string "127.0.0.1", 2375))
+  else
+    ref(Unix.ADDR_UNIX "/var/run/docker.sock")
 
 let set_default_addr addr = default_addr := addr
 (* FIXME: When Unix.ADDR_UNIX, check that the file exists?? *)
