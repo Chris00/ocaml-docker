@@ -2,7 +2,8 @@ OCaml client for Docker Remote API
 ==================================
 
 This library provides an OCaml client for
-[Docker Remote API](https://docs.docker.com/reference/api/docker_remote_api/).
+[Docker Remote API](https://docs.docker.com/reference/api/docker_remote_api/),
+version 1.29.
 This library is tested with the
 [community edition](https://docs.docker.com/engine/installation/)
 of Docker.
@@ -22,7 +23,7 @@ The easier way to install this library is to use
     opam install docker-api
 
 This library depends on [Dune](https://github.com/ocaml/dune) (to
-compile), `uri`, and `yojson`.
+compile) and [Yojson](https://github.com/ocaml-community/yojson).
 
 To compile as a developer, just type `make` and then `make install` to
 install it.
