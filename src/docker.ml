@@ -432,7 +432,7 @@ module Container = struct
       size_root_fs: int option;
     }
 
-  let container_of_json (c: Json.json) =
+  let container_of_json (c: Json.t) =
     match c with
     | `Assoc l ->
        let id = ref "" and names = ref [] and image = ref "" in
@@ -534,7 +534,7 @@ module Container = struct
        `String(absolute_path host_path ^ ":" ^ container_path ^ ":ro")
 
   let json_of_binds = function
-    | [] -> (`Null: Json.json)
+    | [] -> (`Null: Json.t)
     | binds -> `List(List.map json_of_bind binds)
 
   let disallowed_chars_for_name =
@@ -718,7 +718,7 @@ module Container = struct
     (* ConsoleSize — Windows *)
     (* Isolation — Windows *)
     (*** Main payload *)
-    let json : Json.json =
+    let json : Json.t =
       `Assoc [
           ("Hostname", `String hostname);
           ("Domainname", `String domainname);
@@ -984,7 +984,7 @@ module Image = struct
       tags: string list;
     }
 
-  let image_of_json (img: Json.json) =
+  let image_of_json (img: Json.t) =
     match img with
     | `Assoc l ->
        let id = ref "" and created = ref nan and size = ref 0 in
