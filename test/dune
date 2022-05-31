@@ -7,54 +7,54 @@
  (deps version.exe ls.exe exec.exe bind.exe robust.exe ps.exe no_image.exe
        no_cmd.exe run.exe secure.exe))
 
-(alias
- (name    runtest)
+(rule
+ (alias   runtest)
  (deps    version.exe)
  (action  (run %{deps})))
 
-(alias
- (name    runtest)
+(rule
+ (alias   runtest)
  (deps    ls.exe)
  (action  (progn
            (run %{deps})
            (run %{deps} --logs))))
 
-(alias
- (name    runtest)
+(rule
+ (alias   runtest)
  (deps    exec.exe)
  (action  (run %{deps})))
 
-(alias
- (name    runtest)
+(rule
+ (alias   runtest)
  (deps    bind.exe)
  (action  (run %{deps})))
 
-(alias
- (name    runtest)
+(rule
+ (alias   runtest)
  (deps    robust.exe)
  (action  (run %{deps})))
 
-(alias
- (name    runtest)
+(rule
+ (alias   runtest)
  (deps    ps.exe)
  (action  (run %{deps})))
 
-(alias
- (name    runtest)
+(rule
+ (alias   runtest)
  (deps    no_image.exe)
  (action  (run %{deps})))
 
-(alias
- (name    runtest)
+(rule
+ (alias   runtest)
  (deps    no_cmd.exe)
  (action  (run %{deps})))
 
-(alias
- (name    runtest)
+(rule
+ (alias   runtest)
  (deps    run.exe)
  (action  (run %{deps})))
 
-(alias
- (name    runtest)
+(rule
+ (alias   runtest)
  (deps    secure.exe)
  (action  (run %{deps})))
