@@ -1,3 +1,9 @@
+0.2.2 2022-05-31
+----------------
+
+- Compatibility with the Yojson 2.0.
+- Various fixes.
+
 0.2.1 2018-10-30
 ----------------
 
